@@ -5,11 +5,14 @@ import { ApproveRequestUseCase } from "../../application/use-cases/approve-reque
 import { CreateCategoryUseCase } from "../../application/use-cases/create-category.use-case.js";
 import { CreateHouseholdUseCase } from "../../application/use-cases/create-household.use-case.js";
 import { InviteMemberUseCase } from "../../application/use-cases/invite-member.use-case.js";
+import {
+  RegisterExpenseUseCase,
+  type RegisterExpenseItemInput,
+  type RegisterExpenseSplitInput,
+} from "../../application/use-cases/register-expense.use-case.js";
 import { RequestTemporaryExclusionUseCase } from "../../application/use-cases/request-temporary-exclusion.use-case.js";
 import { SetMemberCategoryPreferenceUseCase } from "../../application/use-cases/set-member-category-preference.use-case.js";
-import { CreateCategoryUseCase } from "../../application/use-cases/create-category.use-case.js";
-import { CreateHouseholdUseCase } from "../../application/use-cases/create-household.use-case.js";
-import { InviteMemberUseCase } from "../../application/use-cases/invite-member.use-case.js";
+import { WeightedSplitCalculator } from "../../domain/services/weighted-split-calculator.js";
 import { mapErrorToHttp } from "./error-mapper.js";
 import { MethodNotAllowedError, RouteNotFoundError } from "./http-error.js";
 import { sendJson } from "./json-response.js";
@@ -94,6 +97,18 @@ export const buildHttpRequestHandler = (deps: HttpServerDependencies = {}) => {
     membershipRepository: appContext.repositories.membershipRepository,
     categoryParticipationChangeRequestRepository:
       appContext.repositories.participationChangeRequestRepository,
+    clock,
+  });
+
+  const registerExpenseUseCase = new RegisterExpenseUseCase({
+    householdRepository: appContext.repositories.householdRepository,
+    membershipRepository: appContext.repositories.membershipRepository,
+    categoryRepository: appContext.repositories.categoryRepository,
+    memberCategoryPreferenceRepository: appContext.repositories.memberCategoryPreferenceRepository,
+    participationChangeRequestRepository: appContext.repositories.participationChangeRequestRepository,
+    expenseRepository: appContext.repositories.expenseRepository,
+    weightedSplitCalculator: new WeightedSplitCalculator(),
+    idGenerator,
     clock,
   });
   const routes: HttpRoute[] = [
@@ -278,6 +293,51 @@ export const buildHttpRequestHandler = (deps: HttpServerDependencies = {}) => {
                   : {}),
               }
             : null,
+        });
+      },
+    },
+    {
+      method: "POST",
+      pathPattern: `${API_BASE_PATH}/households/:householdId/expenses`,
+      handler: async ({ req, res, params }) => {
+        const body = asObject(await readJsonBody(req));
+        const note = asOptionalString(body.note, "note");
+        const items = asOptionalExpenseItems(body.items);
+
+        const result = await registerExpenseUseCase.execute({
+          householdId: asRequiredString(params.householdId, "householdId"),
+          categoryId: asRequiredString(body.categoryId, "categoryId"),
+          payerMembershipId: asRequiredString(body.payerMembershipId, "payerMembershipId"),
+          actorMembershipId: asRequiredString(body.actorMembershipId, "actorMembershipId"),
+          date: asRequiredString(body.date, "date"),
+          totalAmount: asRequiredPositiveInteger(body.totalAmount, "totalAmount"),
+          split: asRequiredExpenseSplit(body.split),
+          ...(note ? { note } : {}),
+          ...(items ? { items } : {}),
+        });
+
+        sendJson(res, 201, {
+          expenseId: result.expense.id,
+          householdId: result.expense.householdId,
+          categoryId: result.expense.categoryId,
+          payerMembershipId: result.expense.payerMembershipId,
+          date: result.expense.date.toISOString(),
+          totalAmount: result.expense.totalAmount,
+          status: result.expense.status,
+          ...(result.expense.note ? { note: result.expense.note } : {}),
+          items: result.expense.items,
+          split: {
+            mode: result.expense.split.mode,
+            shares: result.expense.split.shares.map((share) => ({
+              membershipId: share.membershipId,
+              assignedAmount: share.assignedAmount,
+              ...(share.weightUsed !== undefined ? { weightUsed: share.weightUsed } : {}),
+            })),
+          },
+          audit: {
+            createdByMembershipId: result.expense.audit.createdByMembershipId,
+            createdAt: result.expense.audit.createdAt.toISOString(),
+          },
         });
       },
     },
@@ -531,6 +591,85 @@ const asOptionalNullableString = (
   }
 
   return value.trim();
+};
+
+const asRequiredPositiveInteger = (value: unknown, fieldName: string): number => {
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+    throw new ValidationError(`${fieldName} must be a positive integer`);
+  }
+
+  return value;
+};
+
+const asRequiredNonNegativeInteger = (value: unknown, fieldName: string): number => {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new ValidationError(`${fieldName} must be an integer >= 0`);
+  }
+
+  return value;
+};
+
+const asRequiredExpenseSplit = (value: unknown): RegisterExpenseSplitInput => {
+  const split = asObject(value);
+  const mode = split.mode;
+
+  if (mode === "AUTO_WEIGHTED") {
+    return { mode: "AUTO_WEIGHTED" };
+  }
+
+  if (mode === "MANUAL") {
+    const rawShares = split.shares;
+    if (!Array.isArray(rawShares)) {
+      throw new ValidationError("split.shares must be an array for MANUAL mode");
+    }
+
+    return {
+      mode: "MANUAL",
+      shares: rawShares.map((rawShare, index) => {
+        const share = asObject(rawShare);
+        return {
+          membershipId: asRequiredString(
+            share.membershipId,
+            `split.shares[${index}].membershipId`,
+          ),
+          assignedAmount: asRequiredNonNegativeInteger(
+            share.assignedAmount,
+            `split.shares[${index}].assignedAmount`,
+          ),
+        };
+      }),
+    };
+  }
+
+  throw new ValidationError("split.mode must be AUTO_WEIGHTED or MANUAL");
+};
+
+const asOptionalExpenseItems = (value: unknown): RegisterExpenseItemInput[] | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new ValidationError("items must be an array");
+  }
+
+  return value.map((rawItem, index) => {
+    const item = asObject(rawItem);
+    const description = asRequiredString(item.description, `items[${index}].description`);
+    const quantity = asOptionalNumber(item.quantity, `items[${index}].quantity`);
+    if (quantity !== undefined && quantity <= 0) {
+      throw new ValidationError(`items[${index}].quantity must be > 0`);
+    }
+    const unit = asOptionalString(item.unit, `items[${index}].unit`);
+    const note = asOptionalString(item.note, `items[${index}].note`);
+
+    return {
+      description,
+      ...(quantity !== undefined ? { quantity } : {}),
+      ...(unit ? { unit } : {}),
+      ...(note ? { note } : {}),
+    };
+  });
 };
 
 const asOptionalGovernanceSettings = (
