@@ -97,6 +97,19 @@ export class InMemoryMemberCategoryPreferenceRepository
     );
   }
 
+  async listByHouseholdMembershipCategory(
+    householdId: string,
+    membershipId: string,
+    categoryId: string,
+  ) {
+    return [...this.store.preferences.values()].filter(
+      (preference) =>
+        preference.householdId === householdId &&
+        preference.membershipId === membershipId &&
+        preference.categoryId === categoryId,
+    );
+  }
+
   async save(preference: MemberCategoryPreference): Promise<void> {
     this.store.preferences.set(preference.id, preference);
   }
@@ -114,6 +127,10 @@ export class InMemoryCategoryParticipationChangeRequestRepository
         request.categoryId === categoryId &&
         isApprovedTemporaryExclusionActiveOn(request, date),
     );
+  }
+
+  async findById(requestId: string) {
+    return this.store.participationRequests.get(requestId) ?? null;
   }
 
   async save(request: CategoryParticipationChangeRequest): Promise<void> {

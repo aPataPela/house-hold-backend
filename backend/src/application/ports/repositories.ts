@@ -34,6 +34,12 @@ export interface MemberCategoryPreferenceRepository {
     categoryId: string,
     date: Date,
   ): Promise<MemberCategoryPreference[]>;
+  listByHouseholdMembershipCategory(
+    householdId: string,
+    membershipId: string,
+    categoryId: string,
+  ): Promise<MemberCategoryPreference[]>;
+  save(preference: MemberCategoryPreference): Promise<void>;
 }
 
 export interface CategoryParticipationChangeRequestRepository {
@@ -42,6 +48,8 @@ export interface CategoryParticipationChangeRequestRepository {
     categoryId: string,
     date: Date,
   ): Promise<CategoryParticipationChangeRequest[]>;
+  findById(requestId: string): Promise<CategoryParticipationChangeRequest | null>;
+  save(request: CategoryParticipationChangeRequest): Promise<void>;
 }
 
 export interface ExpenseRepository {
