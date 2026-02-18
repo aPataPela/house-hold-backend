@@ -38,6 +38,7 @@ Referencias:
 
 ## Fase 0: Plataforma HTTP mínima
 Estado: `Completada`
+Rama de cierre: `phase/0-foundation`
 
 ### Subfases
 | Subfase | Entregable | Estado |
