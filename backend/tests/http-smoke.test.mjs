@@ -2,28 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildHttpRequestHandler } from "../dist/src/infrastructure/http/create-http-server.js";
-
-const invoke = async (handler, req) => {
-  let responseBody = "";
-  const headers = new Map();
-  const res = {
-    statusCode: 200,
-    setHeader: (name, value) => {
-      headers.set(name.toLowerCase(), value);
-    },
-    end: (body) => {
-      responseBody = body ?? "";
-    },
-  };
-
-  await handler(req, res);
-
-  return {
-    statusCode: res.statusCode,
-    headers,
-    body: responseBody ? JSON.parse(responseBody) : {},
-  };
-};
+import { invoke } from "./support/http-invoke.mjs";
 
 test("HTTP smoke: healthcheck, base router, error mapping", async () => {
   const handler = buildHttpRequestHandler();
