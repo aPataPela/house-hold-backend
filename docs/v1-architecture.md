@@ -33,6 +33,16 @@ backend/
     infrastructure/
       http/
         routes.md
+      persistence/
+        app-context.ts
+        create-app-context.ts
+        persistence-config.ts
+        in-memory/
+          create-in-memory-app-context.ts
+        mongo/
+          create-mongo-app-context.ts
+          mongo-repositories.ts
+          mongo-indexes.ts
   tests/
     weighted-split-calculator.test.mjs
     register-expense.use-case.test.mjs
@@ -52,6 +62,7 @@ backend/
 - `infrastructure/`
   - Adaptadores concretos (HTTP, Mongo, Firestore, etc.).
   - Implementa interfaces de repositorio.
+  - Selecciona persistencia por ambiente (`IN_MEMORY` o `MONGO`) sin acoplar el dominio.
 
 ## Interfaces de repositorio (D)
 Definidas en `backend/src/application/ports/repositories.ts`.
@@ -67,6 +78,14 @@ Principales:
 Servicios de aplicación:
 - `IdGenerator`
 - `Clock`
+
+## Persistencia por ambiente (Fase E)
+- `APP_PERSISTENCE_MODE=IN_MEMORY` (default) usa repositorios en memoria.
+- `APP_PERSISTENCE_MODE=MONGO` usa repositorios Mongo.
+- Configuración Mongo:
+  - `MONGO_URI`
+  - `MONGO_DB_NAME` (default `shared_household_expenses`)
+  - `MONGO_AUTO_CREATE_INDEXES` (`true` por defecto)
 
 ## Inmutabilidad e histórico
 - `Expense.split.shares` se persiste como snapshot.

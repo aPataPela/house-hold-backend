@@ -16,7 +16,7 @@ Leyenda:
 | Fase B | APIs de participación (preferences/requests) | Completada |
 | Fase C | API transaccional RegisterExpense | Completada |
 | Fase D | APIs de lectura (list/balance) | Completada |
-| Fase E | Persistencia Mongo real | Pendiente |
+| Fase E | Persistencia Mongo real | Parcial |
 
 ## Fase -1: Diseño y contratos V1
 Estado: `Completada`
@@ -107,16 +107,17 @@ Rama de cierre: `dev`
 | D.4 | Tests de integración de lecturas por periodo | Completada |
 
 ## Fase E: Persistencia Mongo real
-Estado: `Pendiente`
+Estado: `Parcial`
+Rama de cierre: `dev` (en progreso)
 
 ### Subfases
 | Subfase | Entregable | Estado |
 |---|---|---|
-| E.1 | Implementaciones Mongo de repositorios (ports) | Pendiente |
-| E.2 | Creación de índices principales | Pendiente |
-| E.3 | Configuración por ambiente (`dev/test/prod`) | Pendiente |
-| E.4 | Tests de integración con Mongo | Pendiente |
-| E.5 | Migración de in-memory a Mongo en wiring de app | Pendiente |
+| E.1 | Implementaciones Mongo de repositorios (ports) | Completada |
+| E.2 | Creación de índices principales | Completada |
+| E.3 | Configuración por ambiente (`dev/test/prod`) | Completada |
+| E.4 | Tests de integración con Mongo | Parcial |
+| E.5 | Migración de in-memory a Mongo en wiring de app | Completada |
 
 ## Criterio para marcar una fase como completada
 1. APIs de la fase funcionando por HTTP.
