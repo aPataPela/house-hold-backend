@@ -14,7 +14,7 @@ Leyenda:
 | Fase 0 | Plataforma HTTP mínima | Completada |
 | Fase A | APIs base (household/membership/category) | Completada |
 | Fase B | APIs de participación (preferences/requests) | Completada |
-| Fase C | API transaccional RegisterExpense | Parcial |
+| Fase C | API transaccional RegisterExpense | Completada |
 | Fase D | APIs de lectura (list/balance) | Pendiente |
 | Fase E | Persistencia Mongo real | Pendiente |
 
@@ -74,7 +74,8 @@ Rama de cierre: `phase/b-participation-apis`
 | B.4 | Tests de vigencia temporal y aprobación `ADMIN_ONLY` | Completada |
 
 ## Fase C: API transaccional RegisterExpense
-Estado: `Parcial`
+Estado: `Completada`
+Rama de cierre: `phase/c-register-expense-api`
 
 ### Subfases
 | Subfase | Entregable | Estado |
@@ -84,8 +85,8 @@ Estado: `Parcial`
 | C.3 | Soporte de `items` informativos | Completada |
 | C.4 | Snapshot inmutable de `ExpenseShare` | Completada |
 | C.5 | Unit tests casos 47.000 y 50.000 | Completada |
-| C.6 | Endpoint HTTP `POST /households/{householdId}/expenses` | Pendiente |
-| C.7 | Test de integración HTTP para RegisterExpense | Pendiente |
+| C.6 | Endpoint HTTP `POST /households/{householdId}/expenses` | Completada |
+| C.7 | Test de integración HTTP para RegisterExpense | Completada |
 
 Referencias:
 - `backend/src/application/use-cases/register-expense.use-case.ts`
