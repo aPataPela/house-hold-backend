@@ -12,7 +12,7 @@ Leyenda:
 |---|---|---|
 | Fase -1 | Diseño y contratos V1 | Completada |
 | Fase 0 | Plataforma HTTP mínima | Completada |
-| Fase A | APIs base (household/membership/category) | Pendiente |
+| Fase A | APIs base (household/membership/category) | Completada |
 | Fase B | APIs de participación (preferences/requests) | Pendiente |
 | Fase C | API transaccional RegisterExpense | Parcial |
 | Fase D | APIs de lectura (list/balance) | Pendiente |
@@ -50,15 +50,16 @@ Rama de cierre: `phase/0-foundation`
 | 0.5 | Test de integración smoke HTTP | Completada |
 
 ## Fase A: APIs base
-Estado: `Pendiente`
+Estado: `Completada`
+Rama de cierre: `phase/a-base-apis`
 
 ### Subfases
 | Subfase | API | Estado |
 |---|---|---|
-| A.1 | `POST /households` | Pendiente |
-| A.2 | `POST /households/{householdId}/memberships` | Pendiente |
-| A.3 | `POST /households/{householdId}/categories` | Pendiente |
-| A.4 | Tests de integración de flujo A (create->invite->category) | Pendiente |
+| A.1 | `POST /households` | Completada |
+| A.2 | `POST /households/{householdId}/memberships` | Completada |
+| A.3 | `POST /households/{householdId}/categories` | Completada |
+| A.4 | Tests de integración de flujo A (create->invite->category) | Completada |
 
 ## Fase B: APIs de participación
 Estado: `Pendiente`
