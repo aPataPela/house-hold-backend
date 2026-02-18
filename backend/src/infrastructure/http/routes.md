@@ -10,5 +10,5 @@
 - `POST /api/v1/households/:householdId/category-participation-requests` -> `RequestTemporaryExclusion` (implemented)
 - `POST /api/v1/households/:householdId/category-participation-requests/:requestId/decision` -> `ApproveRequest` (implemented)
 - `POST /api/v1/households/:householdId/expenses` -> `RegisterExpense` (implemented)
-- `GET /api/v1/households/:householdId/balance` -> `GetHouseholdBalance`
-- `GET /api/v1/households/:householdId/expenses` -> `ListExpenses`
+- `GET /api/v1/households/:householdId/balance` -> `GetHouseholdBalance` (implemented)
+- `GET /api/v1/households/:householdId/expenses` -> `ListExpenses` (implemented)

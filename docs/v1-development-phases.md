@@ -15,7 +15,7 @@ Leyenda:
 | Fase A | APIs base (household/membership/category) | Completada |
 | Fase B | APIs de participación (preferences/requests) | Completada |
 | Fase C | API transaccional RegisterExpense | Completada |
-| Fase D | APIs de lectura (list/balance) | Pendiente |
+| Fase D | APIs de lectura (list/balance) | Completada |
 | Fase E | Persistencia Mongo real | Pendiente |
 
 ## Fase -1: Diseño y contratos V1
@@ -95,15 +95,16 @@ Referencias:
 - `backend/tests/weighted-split-calculator.test.mjs`
 
 ## Fase D: APIs de lectura
-Estado: `Pendiente`
+Estado: `Completada`
+Rama de cierre: `dev`
 
 ### Subfases
 | Subfase | API | Estado |
 |---|---|---|
-| D.1 | `GET /households/{householdId}/expenses` | Pendiente |
-| D.2 | `GET /households/{householdId}/balance` | Pendiente |
-| D.3 | Paginación estable por cursor | Pendiente |
-| D.4 | Tests de integración de lecturas por periodo | Pendiente |
+| D.1 | `GET /households/{householdId}/expenses` | Completada |
+| D.2 | `GET /households/{householdId}/balance` | Completada |
+| D.3 | Paginación estable por cursor | Completada |
+| D.4 | Tests de integración de lecturas por periodo | Completada |
 
 ## Fase E: Persistencia Mongo real
 Estado: `Pendiente`
