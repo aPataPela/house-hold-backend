@@ -7,6 +7,9 @@ import { CreateHouseholdUseCase } from "../../application/use-cases/create-house
 import { InviteMemberUseCase } from "../../application/use-cases/invite-member.use-case.js";
 import { RequestTemporaryExclusionUseCase } from "../../application/use-cases/request-temporary-exclusion.use-case.js";
 import { SetMemberCategoryPreferenceUseCase } from "../../application/use-cases/set-member-category-preference.use-case.js";
+import { CreateCategoryUseCase } from "../../application/use-cases/create-category.use-case.js";
+import { CreateHouseholdUseCase } from "../../application/use-cases/create-household.use-case.js";
+import { InviteMemberUseCase } from "../../application/use-cases/invite-member.use-case.js";
 import { mapErrorToHttp } from "./error-mapper.js";
 import { MethodNotAllowedError, RouteNotFoundError } from "./http-error.js";
 import { sendJson } from "./json-response.js";
@@ -93,7 +96,6 @@ export const buildHttpRequestHandler = (deps: HttpServerDependencies = {}) => {
       appContext.repositories.participationChangeRequestRepository,
     clock,
   });
-
   const routes: HttpRoute[] = [
     {
       method: "GET",
@@ -195,6 +197,7 @@ export const buildHttpRequestHandler = (deps: HttpServerDependencies = {}) => {
         });
       },
     },
+
     {
       method: "PUT",
       pathPattern: `${API_BASE_PATH}/households/:householdId/categories/:categoryId/preferences/:membershipId`,
