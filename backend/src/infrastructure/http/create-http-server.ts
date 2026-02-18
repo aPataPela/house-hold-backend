@@ -20,8 +20,8 @@ import { MethodNotAllowedError, RouteNotFoundError } from "./http-error.js";
 import { sendJson } from "./json-response.js";
 import {
   createInMemoryAppContext,
-  type InMemoryAppContext,
 } from "../persistence/in-memory/create-in-memory-app-context.js";
+import type { AppContext } from "../persistence/app-context.js";
 import { SystemClock } from "../system/system-clock.js";
 import { SequentialIdGenerator } from "../system/sequential-id-generator.js";
 
@@ -36,14 +36,14 @@ interface HttpRoute {
     path: string;
     params: Record<string, string>;
     url: URL;
-    appContext: InMemoryAppContext;
+    appContext: AppContext;
     clock: SystemClock;
     idGenerator: SequentialIdGenerator;
   }) => Promise<void> | void;
 }
 
 export interface HttpServerDependencies {
-  appContext?: InMemoryAppContext;
+  appContext?: AppContext;
   clock?: SystemClock;
   idGenerator?: SequentialIdGenerator;
 }

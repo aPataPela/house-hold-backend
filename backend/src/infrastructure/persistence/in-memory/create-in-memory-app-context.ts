@@ -8,11 +8,18 @@ import {
   InMemoryMemberCategoryPreferenceRepository,
   InMemoryMembershipRepository,
 } from "./in-memory-repositories.js";
+import type { AppContext } from "../app-context.js";
 
-export const createInMemoryAppContext = () => {
+export interface InMemoryAppContext extends AppContext {
+  kind: "in-memory";
+  store: ReturnType<typeof createInMemoryStore>;
+}
+
+export const createInMemoryAppContext = (): InMemoryAppContext => {
   const store = createInMemoryStore();
 
   return {
+    kind: "in-memory",
     store,
     repositories: {
       householdRepository: new InMemoryHouseholdRepository(store),
@@ -26,5 +33,3 @@ export const createInMemoryAppContext = () => {
     },
   };
 };
-
-export type InMemoryAppContext = ReturnType<typeof createInMemoryAppContext>;
