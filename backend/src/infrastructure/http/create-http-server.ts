@@ -4,7 +4,9 @@ import { ValidationError } from "../../application/errors.js";
 import { ApproveRequestUseCase } from "../../application/use-cases/approve-request.use-case.js";
 import { CreateCategoryUseCase } from "../../application/use-cases/create-category.use-case.js";
 import { CreateHouseholdUseCase } from "../../application/use-cases/create-household.use-case.js";
+import { GetHouseholdBalanceUseCase } from "../../application/use-cases/get-household-balance.use-case.js";
 import { InviteMemberUseCase } from "../../application/use-cases/invite-member.use-case.js";
+import { ListExpensesUseCase } from "../../application/use-cases/list-expenses.use-case.js";
 import {
   RegisterExpenseUseCase,
   type RegisterExpenseItemInput,
@@ -110,6 +112,16 @@ export const buildHttpRequestHandler = (deps: HttpServerDependencies = {}) => {
     weightedSplitCalculator: new WeightedSplitCalculator(),
     idGenerator,
     clock,
+  });
+
+  const listExpensesUseCase = new ListExpensesUseCase({
+    householdRepository: appContext.repositories.householdRepository,
+    expenseRepository: appContext.repositories.expenseRepository,
+  });
+
+  const getHouseholdBalanceUseCase = new GetHouseholdBalanceUseCase({
+    householdRepository: appContext.repositories.householdRepository,
+    householdBalanceReadModel: appContext.repositories.householdBalanceReadModel,
   });
   const routes: HttpRoute[] = [
     {
@@ -338,6 +350,79 @@ export const buildHttpRequestHandler = (deps: HttpServerDependencies = {}) => {
             createdByMembershipId: result.expense.audit.createdByMembershipId,
             createdAt: result.expense.audit.createdAt.toISOString(),
           },
+        });
+      },
+    },
+    {
+      method: "GET",
+      pathPattern: `${API_BASE_PATH}/households/:householdId/expenses`,
+      handler: async ({ res, params, url }) => {
+        const from = asRequiredSearchParam(url, "from");
+        const to = asRequiredSearchParam(url, "to");
+        const categoryId = asOptionalSearchParam(url, "categoryId");
+        const status = asOptionalExpenseStatus(url.searchParams.get("status"));
+        const limit = asOptionalPositiveInteger(url.searchParams.get("limit"), "limit");
+        const cursor = asOptionalSearchParam(url, "cursor");
+
+        const result = await listExpensesUseCase.execute({
+          householdId: asRequiredString(params.householdId, "householdId"),
+          from,
+          to,
+          ...(categoryId ? { categoryId } : {}),
+          ...(status ? { status } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+          ...(cursor ? { cursor } : {}),
+        });
+
+        sendJson(res, 200, {
+          expenses: result.expenses.map((expense) => ({
+            expenseId: expense.id,
+            householdId: expense.householdId,
+            categoryId: expense.categoryId,
+            payerMembershipId: expense.payerMembershipId,
+            date: expense.date.toISOString(),
+            totalAmount: expense.totalAmount,
+            status: expense.status,
+            ...(expense.note ? { note: expense.note } : {}),
+            items: expense.items,
+            split: {
+              mode: expense.split.mode,
+              shares: expense.split.shares.map((share) => ({
+                membershipId: share.membershipId,
+                assignedAmount: share.assignedAmount,
+                ...(share.weightUsed !== undefined ? { weightUsed: share.weightUsed } : {}),
+              })),
+            },
+            audit: {
+              createdByMembershipId: expense.audit.createdByMembershipId,
+              createdAt: expense.audit.createdAt.toISOString(),
+              updatedAt: expense.audit.updatedAt.toISOString(),
+            },
+          })),
+          page: {
+            ...(limit !== undefined ? { limit } : {}),
+            ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
+          },
+        });
+      },
+    },
+    {
+      method: "GET",
+      pathPattern: `${API_BASE_PATH}/households/:householdId/balance`,
+      handler: async ({ res, params, url }) => {
+        const from = asRequiredSearchParam(url, "from");
+        const to = asRequiredSearchParam(url, "to");
+
+        const result = await getHouseholdBalanceUseCase.execute({
+          householdId: asRequiredString(params.householdId, "householdId"),
+          from,
+          to,
+        });
+
+        sendJson(res, 200, {
+          householdId: result.householdId,
+          period: result.period,
+          members: result.members,
         });
       },
     },
@@ -670,6 +755,54 @@ const asOptionalExpenseItems = (value: unknown): RegisterExpenseItemInput[] | un
       ...(note ? { note } : {}),
     };
   });
+};
+
+const asRequiredSearchParam = (url: URL, key: string): string => {
+  const value = url.searchParams.get(key);
+  if (!value || value.trim().length === 0) {
+    throw new ValidationError(`${key} query param is required`);
+  }
+
+  return value.trim();
+};
+
+const asOptionalSearchParam = (url: URL, key: string): string | undefined => {
+  const value = url.searchParams.get(key);
+  if (!value || value.trim().length === 0) {
+    return undefined;
+  }
+
+  return value.trim();
+};
+
+const asOptionalPositiveInteger = (
+  raw: string | null,
+  fieldName: string,
+): number | undefined => {
+  if (raw === null || raw.trim().length === 0) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new ValidationError(`${fieldName} must be a positive integer`);
+  }
+
+  return parsed;
+};
+
+const asOptionalExpenseStatus = (
+  raw: string | null,
+): "ACTIVE" | "CANCELLED" | undefined => {
+  if (raw === null || raw.trim().length === 0) {
+    return undefined;
+  }
+
+  if (raw === "ACTIVE" || raw === "CANCELLED") {
+    return raw;
+  }
+
+  throw new ValidationError("status query param must be ACTIVE or CANCELLED");
 };
 
 const asOptionalGovernanceSettings = (
