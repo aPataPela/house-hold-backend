@@ -1,9 +1,12 @@
 import { createServer } from "node:http";
 
 import { ValidationError } from "../../application/errors.js";
+import { ApproveRequestUseCase } from "../../application/use-cases/approve-request.use-case.js";
 import { CreateCategoryUseCase } from "../../application/use-cases/create-category.use-case.js";
 import { CreateHouseholdUseCase } from "../../application/use-cases/create-household.use-case.js";
 import { InviteMemberUseCase } from "../../application/use-cases/invite-member.use-case.js";
+import { RequestTemporaryExclusionUseCase } from "../../application/use-cases/request-temporary-exclusion.use-case.js";
+import { SetMemberCategoryPreferenceUseCase } from "../../application/use-cases/set-member-category-preference.use-case.js";
 import { mapErrorToHttp } from "./error-mapper.js";
 import { MethodNotAllowedError, RouteNotFoundError } from "./http-error.js";
 import { sendJson } from "./json-response.js";
@@ -61,6 +64,33 @@ export const buildHttpRequestHandler = (deps: HttpServerDependencies = {}) => {
     membershipRepository: appContext.repositories.membershipRepository,
     categoryRepository: appContext.repositories.categoryRepository,
     idGenerator,
+    clock,
+  });
+
+  const setMemberCategoryPreferenceUseCase = new SetMemberCategoryPreferenceUseCase({
+    householdRepository: appContext.repositories.householdRepository,
+    membershipRepository: appContext.repositories.membershipRepository,
+    categoryRepository: appContext.repositories.categoryRepository,
+    memberCategoryPreferenceRepository: appContext.repositories.memberCategoryPreferenceRepository,
+    idGenerator,
+    clock,
+  });
+
+  const requestTemporaryExclusionUseCase = new RequestTemporaryExclusionUseCase({
+    householdRepository: appContext.repositories.householdRepository,
+    membershipRepository: appContext.repositories.membershipRepository,
+    categoryRepository: appContext.repositories.categoryRepository,
+    categoryParticipationChangeRequestRepository:
+      appContext.repositories.participationChangeRequestRepository,
+    idGenerator,
+    clock,
+  });
+
+  const approveRequestUseCase = new ApproveRequestUseCase({
+    householdRepository: appContext.repositories.householdRepository,
+    membershipRepository: appContext.repositories.membershipRepository,
+    categoryParticipationChangeRequestRepository:
+      appContext.repositories.participationChangeRequestRepository,
     clock,
   });
 
@@ -162,6 +192,89 @@ export const buildHttpRequestHandler = (deps: HttpServerDependencies = {}) => {
           name: result.category.name,
           createdAt: result.category.createdAt.toISOString(),
           status: result.category.status,
+        });
+      },
+    },
+    {
+      method: "PUT",
+      pathPattern: `${API_BASE_PATH}/households/:householdId/categories/:categoryId/preferences/:membershipId`,
+      handler: async ({ req, res, params }) => {
+        const body = asObject(await readJsonBody(req));
+        const validTo = asOptionalNullableString(body.validTo, "validTo");
+        const weight = asOptionalNumber(body.weight, "weight");
+
+        const result = await setMemberCategoryPreferenceUseCase.execute({
+          householdId: asRequiredString(params.householdId, "householdId"),
+          membershipId: asRequiredString(params.membershipId, "membershipId"),
+          categoryId: asRequiredString(params.categoryId, "categoryId"),
+          mode: asRequiredPreferenceMode(body.mode),
+          validFrom: asRequiredString(body.validFrom, "validFrom"),
+          changedByMembershipId: asRequiredString(body.changedByMembershipId, "changedByMembershipId"),
+          ...(weight !== undefined ? { weight } : {}),
+          ...(validTo !== undefined ? { validTo } : {}),
+        });
+
+        sendJson(res, 200, {
+          preferenceId: result.preference.id,
+          membershipId: result.preference.membershipId,
+          categoryId: result.preference.categoryId,
+          mode: result.preference.mode,
+          weight: result.preference.weight,
+          validFrom: result.preference.validFrom.toISOString(),
+          validTo: result.preference.validTo ? result.preference.validTo.toISOString() : null,
+        });
+      },
+    },
+    {
+      method: "POST",
+      pathPattern: `${API_BASE_PATH}/households/:householdId/category-participation-requests`,
+      handler: async ({ req, res, params }) => {
+        const body = asObject(await readJsonBody(req));
+        asRequiredRequestType(body.requestType);
+
+        const result = await requestTemporaryExclusionUseCase.execute({
+          householdId: asRequiredString(params.householdId, "householdId"),
+          membershipId: asRequiredString(body.membershipId, "membershipId"),
+          categoryId: asRequiredString(body.categoryId, "categoryId"),
+          periodStart: asRequiredString(body.periodStart, "periodStart"),
+          periodEnd: asRequiredString(body.periodEnd, "periodEnd"),
+          reason: asRequiredString(body.reason, "reason"),
+        });
+
+        sendJson(res, 201, {
+          requestId: result.request.id,
+          status: result.request.status,
+          createdAt: result.request.createdAt.toISOString(),
+        });
+      },
+    },
+    {
+      method: "POST",
+      pathPattern: `${API_BASE_PATH}/households/:householdId/category-participation-requests/:requestId/decision`,
+      handler: async ({ req, res, params }) => {
+        const body = asObject(await readJsonBody(req));
+        const comment = asOptionalString(body.comment, "comment");
+
+        const result = await approveRequestUseCase.execute({
+          householdId: asRequiredString(params.householdId, "householdId"),
+          requestId: asRequiredString(params.requestId, "requestId"),
+          decision: asRequiredDecision(body.decision),
+          decidedByMembershipId: asRequiredString(body.decidedByMembershipId, "decidedByMembershipId"),
+          ...(comment ? { comment } : {}),
+        });
+
+        sendJson(res, 200, {
+          requestId: result.request.id,
+          status: result.request.status,
+          decision: result.request.decision
+            ? {
+                decidedByMembershipId: result.request.decision.decidedByMembershipId,
+                decidedAt: result.request.decision.decidedAt.toISOString(),
+                ...(result.request.decision.comment
+                  ? { comment: result.request.decision.comment }
+                  : {}),
+              }
+            : null,
         });
       },
     },
@@ -341,6 +454,80 @@ const asRequiredRole = (value: unknown): "ADMIN" | "MEMBER" => {
   }
 
   return value;
+};
+
+const asRequiredPreferenceMode = (
+  value: unknown,
+): "INCLUDE_DEFAULT" | "EXCLUDE_DEFAULT" => {
+  if (value !== "INCLUDE_DEFAULT" && value !== "EXCLUDE_DEFAULT") {
+    throw new ValidationError("mode must be INCLUDE_DEFAULT or EXCLUDE_DEFAULT");
+  }
+
+  return value;
+};
+
+const asRequiredRequestType = (value: unknown): "TEMPORARY_EXCLUDE" => {
+  if (value !== "TEMPORARY_EXCLUDE") {
+    throw new ValidationError("requestType must be TEMPORARY_EXCLUDE");
+  }
+
+  return value;
+};
+
+const asRequiredDecision = (value: unknown): "APPROVED" | "REJECTED" => {
+  if (value !== "APPROVED" && value !== "REJECTED") {
+    throw new ValidationError("decision must be APPROVED or REJECTED");
+  }
+
+  return value;
+};
+
+const asOptionalNumber = (value: unknown, fieldName: string): number | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new ValidationError(`${fieldName} must be a finite number`);
+  }
+
+  return value;
+};
+
+const asOptionalString = (value: unknown, fieldName: string): string | undefined => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    throw new ValidationError(`${fieldName} must be a string`);
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  return trimmed;
+};
+
+const asOptionalNullableString = (
+  value: unknown,
+  fieldName: string,
+): string | null | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ValidationError(`${fieldName} must be a non-empty string or null`);
+  }
+
+  return value.trim();
 };
 
 const asOptionalGovernanceSettings = (
