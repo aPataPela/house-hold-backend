@@ -1,8 +1,14 @@
 # HTTP route -> use case mapping (adapter sketch)
 
-- `POST /api/v1/households` -> `CreateHousehold`
-- `POST /api/v1/households/:householdId/memberships` -> `InviteMember`
-- `POST /api/v1/households/:householdId/categories` -> `CreateCategory`
+- `GET /health` -> healthcheck
+- `GET /api/v1` -> api info
+- `GET /api/v1/health` -> api healthcheck
+- `POST /api/v1/households` -> `CreateHousehold` (implemented)
+- `POST /api/v1/households/:householdId/memberships` -> `InviteMember` (implemented)
+- `POST /api/v1/households/:householdId/categories` -> `CreateCategory` (implemented)
+- `PUT /api/v1/households/:householdId/categories/:categoryId/preferences/:membershipId` -> `SetMemberCategoryPreference` (implemented)
+- `POST /api/v1/households/:householdId/category-participation-requests` -> `RequestTemporaryExclusion` (implemented)
+- `POST /api/v1/households/:householdId/category-participation-requests/:requestId/decision` -> `ApproveRequest` (implemented)
 - `PUT /api/v1/households/:householdId/categories/:categoryId/preferences/:membershipId` -> `SetMemberCategoryPreference`
 - `POST /api/v1/households/:householdId/category-participation-requests` -> `RequestTemporaryExclusion`
 - `POST /api/v1/households/:householdId/category-participation-requests/:requestId/decision` -> `ApproveRequest`

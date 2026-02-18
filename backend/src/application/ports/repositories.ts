@@ -12,15 +12,20 @@ export interface Period {
 
 export interface HouseholdRepository {
   findById(householdId: string): Promise<Household | null>;
+  save(household: Household): Promise<void>;
 }
 
 export interface MembershipRepository {
   findById(membershipId: string): Promise<Membership | null>;
   listActiveByHouseholdOnDate(householdId: string, date: Date): Promise<Membership[]>;
+  findActiveByHouseholdAndUser(householdId: string, userId: string, date: Date): Promise<Membership | null>;
+  save(membership: Membership): Promise<void>;
 }
 
 export interface CategoryRepository {
   findById(categoryId: string): Promise<Category | null>;
+  findByHouseholdAndNormalizedName(householdId: string, normalizedName: string): Promise<Category | null>;
+  save(category: Category): Promise<void>;
 }
 
 export interface MemberCategoryPreferenceRepository {
@@ -29,6 +34,12 @@ export interface MemberCategoryPreferenceRepository {
     categoryId: string,
     date: Date,
   ): Promise<MemberCategoryPreference[]>;
+  listByHouseholdMembershipCategory(
+    householdId: string,
+    membershipId: string,
+    categoryId: string,
+  ): Promise<MemberCategoryPreference[]>;
+  save(preference: MemberCategoryPreference): Promise<void>;
 }
 
 export interface CategoryParticipationChangeRequestRepository {
@@ -37,6 +48,8 @@ export interface CategoryParticipationChangeRequestRepository {
     categoryId: string,
     date: Date,
   ): Promise<CategoryParticipationChangeRequest[]>;
+  findById(requestId: string): Promise<CategoryParticipationChangeRequest | null>;
+  save(request: CategoryParticipationChangeRequest): Promise<void>;
 }
 
 export interface ExpenseRepository {

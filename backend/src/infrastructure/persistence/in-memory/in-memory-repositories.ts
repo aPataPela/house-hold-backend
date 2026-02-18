@@ -45,6 +45,17 @@ export class InMemoryMembershipRepository implements MembershipRepository {
     );
   }
 
+  async findActiveByHouseholdAndUser(householdId: string, userId: string, date: Date) {
+    return (
+      [...this.store.memberships.values()].find(
+        (membership) =>
+          membership.householdId === householdId &&
+          membership.userId === userId &&
+          isMembershipActiveOn(membership, date),
+      ) ?? null
+    );
+  }
+
   async save(membership: Membership): Promise<void> {
     this.store.memberships.set(membership.id, membership);
   }
@@ -55,6 +66,16 @@ export class InMemoryCategoryRepository implements CategoryRepository {
 
   async findById(categoryId: string) {
     return this.store.categories.get(categoryId) ?? null;
+  }
+
+  async findByHouseholdAndNormalizedName(householdId: string, normalizedName: string) {
+    return (
+      [...this.store.categories.values()].find(
+        (category) =>
+          category.householdId === householdId &&
+          normalizeCategoryName(category.name) === normalizedName,
+      ) ?? null
+    );
   }
 
   async save(category: Category): Promise<void> {
@@ -76,6 +97,19 @@ export class InMemoryMemberCategoryPreferenceRepository
     );
   }
 
+  async listByHouseholdMembershipCategory(
+    householdId: string,
+    membershipId: string,
+    categoryId: string,
+  ) {
+    return [...this.store.preferences.values()].filter(
+      (preference) =>
+        preference.householdId === householdId &&
+        preference.membershipId === membershipId &&
+        preference.categoryId === categoryId,
+    );
+  }
+
   async save(preference: MemberCategoryPreference): Promise<void> {
     this.store.preferences.set(preference.id, preference);
   }
@@ -93,6 +127,10 @@ export class InMemoryCategoryParticipationChangeRequestRepository
         request.categoryId === categoryId &&
         isApprovedTemporaryExclusionActiveOn(request, date),
     );
+  }
+
+  async findById(requestId: string) {
+    return this.store.participationRequests.get(requestId) ?? null;
   }
 
   async save(request: CategoryParticipationChangeRequest): Promise<void> {
@@ -184,3 +222,5 @@ export class InMemoryHouseholdBalanceReadModel implements HouseholdBalanceReadMo
     }));
   }
 }
+
+const normalizeCategoryName = (name: string): string => name.trim().toLowerCase();
