@@ -13,7 +13,7 @@ Leyenda:
 | Fase -1 | Diseño y contratos V1 | Completada |
 | Fase 0 | Plataforma HTTP mínima | Completada |
 | Fase A | APIs base (household/membership/category) | Completada |
-| Fase B | APIs de participación (preferences/requests) | Pendiente |
+| Fase B | APIs de participación (preferences/requests) | Completada |
 | Fase C | API transaccional RegisterExpense | Parcial |
 | Fase D | APIs de lectura (list/balance) | Pendiente |
 | Fase E | Persistencia Mongo real | Pendiente |
@@ -62,15 +62,16 @@ Rama de cierre: `phase/a-base-apis`
 | A.4 | Tests de integración de flujo A (create->invite->category) | Completada |
 
 ## Fase B: APIs de participación
-Estado: `Pendiente`
+Estado: `Completada`
+Rama de cierre: `phase/b-participation-apis`
 
 ### Subfases
 | Subfase | API | Estado |
 |---|---|---|
-| B.1 | `PUT /households/{householdId}/categories/{categoryId}/preferences/{membershipId}` | Pendiente |
-| B.2 | `POST /households/{householdId}/category-participation-requests` | Pendiente |
-| B.3 | `POST /households/{householdId}/category-participation-requests/{requestId}/decision` | Pendiente |
-| B.4 | Tests de vigencia temporal y aprobación `ADMIN_ONLY` | Pendiente |
+| B.1 | `PUT /households/{householdId}/categories/{categoryId}/preferences/{membershipId}` | Completada |
+| B.2 | `POST /households/{householdId}/category-participation-requests` | Completada |
+| B.3 | `POST /households/{householdId}/category-participation-requests/{requestId}/decision` | Completada |
+| B.4 | Tests de vigencia temporal y aprobación `ADMIN_ONLY` | Completada |
 
 ## Fase C: API transaccional RegisterExpense
 Estado: `Parcial`

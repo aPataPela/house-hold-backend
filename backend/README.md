@@ -29,6 +29,10 @@ npm run test
   - `POST /api/v1/households`
   - `POST /api/v1/households/:householdId/memberships`
   - `POST /api/v1/households/:householdId/categories`
+- Implementado (Fase B):
+  - `PUT /api/v1/households/:householdId/categories/:categoryId/preferences/:membershipId`
+  - `POST /api/v1/households/:householdId/category-participation-requests`
+  - `POST /api/v1/households/:householdId/category-participation-requests/:requestId/decision`
 - Implementado: `RegisterExpense` con split `AUTO_WEIGHTED` y `MANUAL`.
 - Implementado: `WeightedSplitCalculator` (largest remainder, suma exacta CLP).
 - Incluye tests unitarios para casos 47.000 y 50.000.
