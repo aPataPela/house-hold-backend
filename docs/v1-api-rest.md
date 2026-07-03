@@ -1,279 +1,50 @@
-# V1 REST API Contracts
+# Contrato REST V1
 
-Base path sugerido: `/api/v1`
+Base: `/api/v1`. Fechas: `YYYY-MM-DD`. Dinero: entero CLP.
 
-Convenciones:
-- Fechas: ISO-8601 UTC (`YYYY-MM-DD` o `YYYY-MM-DDTHH:mm:ss.sssZ`).
-- Dinero CLP: entero en pesos (`number`).
-- Errores: `{ "error": { "code": "...", "message": "..." } }`.
+Errores:
 
-## 1) CreateHousehold
-`POST /api/v1/households`
-
-### Request
 ```json
 {
-  "name": "Casa Ñuñoa",
-  "currency": "CLP",
-  "governanceSettings": {
-    "categoryParticipationApprovalMode": "ADMIN_ONLY"
-  },
-  "createdByUserId": "usr_1"
-}
-```
-
-### Response 201
-```json
-{
-  "householdId": "hh_1",
-  "name": "Casa Ñuñoa",
-  "currency": "CLP",
-  "governanceSettings": {
-    "categoryParticipationApprovalMode": "ADMIN_ONLY"
-  },
-  "createdAt": "2026-02-18T12:00:00.000Z",
-  "creatorMembershipId": "m_1"
-}
-```
-
-## 2) InviteMember / JoinHousehold (simple)
-`POST /api/v1/households/{householdId}/memberships`
-
-### Request
-```json
-{
-  "userId": "usr_2",
-  "role": "MEMBER",
-  "invitedByMembershipId": "m_1"
-}
-```
-
-### Response 201
-```json
-{
-  "membershipId": "m_2",
-  "householdId": "hh_1",
-  "userId": "usr_2",
-  "role": "MEMBER",
-  "status": "ACTIVE",
-  "joinedAt": "2026-02-18T12:05:00.000Z"
-}
-```
-
-## 3) CreateCategory
-`POST /api/v1/households/{householdId}/categories`
-
-### Request
-```json
-{
-  "name": "Feria",
-  "createdByMembershipId": "m_1"
-}
-```
-
-### Response 201
-```json
-{
-  "categoryId": "cat_1",
-  "householdId": "hh_1",
-  "name": "Feria",
-  "createdAt": "2026-02-18T12:10:00.000Z"
-}
-```
-
-## 4) SetMemberCategoryPreference
-`PUT /api/v1/households/{householdId}/categories/{categoryId}/preferences/{membershipId}`
-
-### Request
-```json
-{
-  "mode": "INCLUDE_DEFAULT",
-  "weight": 0.5,
-  "validFrom": "2026-02-01",
-  "validTo": null,
-  "changedByMembershipId": "m_1"
-}
-```
-
-### Response 200
-```json
-{
-  "preferenceId": "pref_1",
-  "membershipId": "m_7",
-  "categoryId": "cat_1",
-  "mode": "INCLUDE_DEFAULT",
-  "weight": 0.5,
-  "validFrom": "2026-02-01",
-  "validTo": null
-}
-```
-
-## 5) RequestTemporaryExclusion
-`POST /api/v1/households/{householdId}/category-participation-requests`
-
-### Request
-```json
-{
-  "membershipId": "m_7",
-  "categoryId": "cat_1",
-  "requestType": "TEMPORARY_EXCLUDE",
-  "periodStart": "2026-03-01",
-  "periodEnd": "2026-03-20",
-  "reason": "Viaje"
-}
-```
-
-### Response 201
-```json
-{
-  "requestId": "req_1",
-  "status": "PENDING",
-  "createdAt": "2026-02-18T12:20:00.000Z"
-}
-```
-
-## 6) ApproveRequest
-`POST /api/v1/households/{householdId}/category-participation-requests/{requestId}/decision`
-
-### Request
-```json
-{
-  "decision": "APPROVED",
-  "decidedByMembershipId": "m_1",
-  "comment": "Ok"
-}
-```
-
-### Response 200
-```json
-{
-  "requestId": "req_1",
-  "status": "APPROVED",
-  "decision": {
-    "decidedByMembershipId": "m_1",
-    "decidedAt": "2026-02-18T12:25:00.000Z",
-    "comment": "Ok"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "request validation failed",
+    "details": {}
   }
 }
 ```
 
-## 7) RegisterExpense (con items)
-`POST /api/v1/households/{householdId}/expenses`
+## Recursos base
 
-### Request (`AUTO_WEIGHTED`)
-```json
-{
-  "categoryId": "cat_frutos_secos",
-  "payerMembershipId": "m_3",
-  "date": "2026-02-10",
-  "totalAmount": 47000,
-  "note": "Compra mensual",
-  "items": [
-    { "description": "Dátiles", "quantity": 1, "unit": "kg" },
-    { "description": "Avena integral", "quantity": 2, "unit": "kg" }
-  ],
-  "split": {
-    "mode": "AUTO_WEIGHTED"
-  },
-  "actorMembershipId": "m_3"
-}
-```
+- `POST /households`
+  - Body: `{ "name": "Casa Ñuñoa", "currency": "CLP", "createdByUserId": "usr_1" }`
+  - Crea el household y su membership ADMIN inicial. Responde `201`.
+- `POST /households/{householdId}/memberships`
+  - Body: `{ "userId": "usr_2", "role": "MEMBER", "invitedByMembershipId": "m_1" }`
+  - Solo ADMIN activo. Responde `201`.
+- `POST /households/{householdId}/categories`
+  - Body: `{ "name": "Feria", "createdByMembershipId": "m_1" }`
+  - El nombre es único por household sin distinguir mayúsculas. Responde `201`.
 
-### Request (`MANUAL`)
-```json
-{
-  "categoryId": "cat_frutos_secos",
-  "payerMembershipId": "m_3",
-  "date": "2026-02-10",
-  "totalAmount": 47000,
-  "items": [
-    { "description": "Avena integral", "quantity": 2, "unit": "kg" }
-  ],
-  "split": {
-    "mode": "MANUAL",
-    "shares": [
-      { "membershipId": "m_1", "assignedAmount": 6715 },
-      { "membershipId": "m_2", "assignedAmount": 6714 }
-    ]
-  },
-  "actorMembershipId": "m_3"
-}
-```
+## Participación
 
-### Response 201
-```json
-{
-  "expenseId": "exp_1",
-  "householdId": "hh_1",
-  "categoryId": "cat_frutos_secos",
-  "payerMembershipId": "m_3",
-  "date": "2026-02-10",
-  "totalAmount": 47000,
-  "status": "ACTIVE",
-  "items": [
-    { "description": "Dátiles", "quantity": 1, "unit": "kg" },
-    { "description": "Avena integral", "quantity": 2, "unit": "kg" }
-  ],
-  "split": {
-    "mode": "AUTO_WEIGHTED",
-    "shares": [
-      { "membershipId": "m_1", "assignedAmount": 6715, "weightUsed": 1 },
-      { "membershipId": "m_7", "assignedAmount": 3357, "weightUsed": 0.5 }
-    ]
-  },
-  "audit": {
-    "createdByMembershipId": "m_3",
-    "createdAt": "2026-02-18T12:30:00.000Z"
-  }
-}
-```
+- `PUT /households/{householdId}/categories/{categoryId}/preferences/{membershipId}`
+  - Body: `{ "mode": "INCLUDE_DEFAULT", "weight": 0.5, "validFrom": "2026-01-01", "validTo": null, "changedByMembershipId": "m_1" }`
+  - Rechaza periodos solapados. Responde `200`.
+- `POST /households/{householdId}/category-exclusions`
+  - Body: `{ "membershipId": "m_2", "categoryId": "cat_1", "periodStart": "2026-03-01", "periodEnd": "2026-04-01", "reason": "Viaje", "createdByMembershipId": "m_2" }`
+  - Crea una exclusión `ACTIVE` efectiva inmediatamente. Un `MEMBER` solo puede gestionarse a sí mismo; un `ADMIN` puede gestionar cualquier miembro. Rechaza periodos solapados activos. Responde `201`.
+- `POST /households/{householdId}/category-exclusions/{exclusionId}/cancel`
+  - Body: `{ "cancelledByMembershipId": "m_2" }`
+  - Cancela sin borrar histórico. Responde `200` con estado `CANCELLED`.
 
-## 8) GetHouseholdBalance(periodo)
-`GET /api/v1/households/{householdId}/balance?from=2026-02-01&to=2026-03-01`
+## Gastos
 
-### Response 200
-```json
-{
-  "householdId": "hh_1",
-  "period": {
-    "from": "2026-02-01",
-    "to": "2026-03-01"
-  },
-  "members": [
-    {
-      "membershipId": "m_1",
-      "paid": 50000,
-      "assigned": 13857,
-      "netBalance": 36143
-    }
-  ]
-}
-```
-
-## 9) ListExpenses(periodo)
-`GET /api/v1/households/{householdId}/expenses?from=2026-02-01&to=2026-03-01&limit=50`
-
-### Response 200
-```json
-{
-  "expenses": [
-    {
-      "expenseId": "exp_1",
-      "date": "2026-02-10",
-      "categoryId": "cat_frutos_secos",
-      "totalAmount": 47000,
-      "status": "ACTIVE",
-      "split": {
-        "mode": "AUTO_WEIGHTED",
-        "shares": [
-          { "membershipId": "m_1", "assignedAmount": 6715, "weightUsed": 1 }
-        ]
-      }
-    }
-  ],
-  "page": {
-    "limit": 50,
-    "nextCursor": "exp_1"
-  }
-}
-```
+- `POST /households/{householdId}/expenses`
+  - AUTO: `{ "categoryId": "cat_1", "payerMembershipId": "m_1", "actorMembershipId": "m_1", "date": "2026-02-10", "totalAmount": 47000, "split": { "mode": "AUTO_WEIGHTED" } }`
+  - MANUAL válido: `{ "categoryId": "cat_1", "payerMembershipId": "m_1", "actorMembershipId": "m_1", "date": "2026-02-10", "totalAmount": 47000, "split": { "mode": "MANUAL", "shares": [{ "membershipId": "m_1", "assignedAmount": 23500 }, { "membershipId": "m_2", "assignedAmount": 23500 }] } }`
+  - Los shares deben usar memberships activas y sumar exactamente `totalAmount`. Responde `201`.
+- `GET /households/{householdId}/expenses?from=2026-02-01&to=2026-03-01&limit=50&cursor=...`
+  - Filtros opcionales: `categoryId`, `status`. `nextCursor` es opaco. Responde `200`.
+- `GET /households/{householdId}/balance?from=2026-02-01&to=2026-03-01`
+  - `netBalance = paid - assigned`; la suma de saldos es cero. Responde `200`.

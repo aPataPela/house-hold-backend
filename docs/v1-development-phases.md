@@ -1,126 +1,26 @@
-# V1 Development Phases and Subphases
+# Fases de desarrollo V1
 
-Estado actualizado: 2026-02-18
+Estado actualizado: 2026-06-18.
 
-Leyenda:
-- `Completada`: lista para usar y validada.
-- `Parcial`: hay implementación, pero falta cerrar alcance de la fase.
-- `Pendiente`: no iniciada.
+| Fase     | Entregable                                                  | Estado     |
+| -------- | ----------------------------------------------------------- | ---------- |
+| Reinicio | Retiro de implementación artesanal y documentación anterior | Completada |
+| -1       | Arquitectura, contratos y roadmap Express/Mongoose          | Completada |
+| 0        | Fundación Express, Mongo, middleware y healthchecks         | Completada |
+| A        | Household, memberships y categories                         | Completada |
+| B        | Preferencias y exclusiones autoservicio                     | Completada |
+| C        | Registro y reparto de gastos                                | Completada |
+| D        | Listado paginado y balance                                  | Completada |
+| E        | Docker, CI, logging, seguridad y documentación              | Completada |
 
-## Resumen rápido
-| Fase | Nombre | Estado |
-|---|---|---|
-| Fase -1 | Diseño y contratos V1 | Completada |
-| Fase 0 | Plataforma HTTP mínima | Completada |
-| Fase A | APIs base (household/membership/category) | Completada |
-| Fase B | APIs de participación (preferences/requests) | Completada |
-| Fase C | API transaccional RegisterExpense | Completada |
-| Fase D | APIs de lectura (list/balance) | Completada |
-| Fase E | Persistencia Mongo real | Parcial |
+## Criterio de cierre
 
-## Fase -1: Diseño y contratos V1
-Estado: `Completada`
+Una fase solo se considera completada cuando compila, pasa lint y tiene pruebas automatizadas deterministas. Mongo forma parte de la aplicación desde la Fase 0; no existe una migración posterior desde almacenamiento temporal.
 
-### Subfases
-| Subfase | Entregable | Estado |
-|---|---|---|
-| -1.1 | Casos de uso V1 | Completada |
-| -1.2 | Contratos REST V1 | Completada |
-| -1.3 | Arquitectura por capas + puertos | Completada |
-| -1.4 | Índices/queries NoSQL sugeridos | Completada |
+## Secuencia funcional
 
-Referencias:
-- `docs/v1-application-use-cases.md`
-- `docs/v1-api-rest.md`
-- `docs/v1-architecture.md`
-- `docs/v1-mongo-indexes-and-queries.md`
-- `docs/v1-api-dependency-matrix.md`
-
-## Fase 0: Plataforma HTTP mínima
-Estado: `Completada`
-Rama de cierre: `phase/0-foundation`
-
-### Subfases
-| Subfase | Entregable | Estado |
-|---|---|---|
-| 0.1 | `server.ts` con arranque y healthcheck | Completada |
-| 0.2 | Router base `/api/v1` | Completada |
-| 0.3 | Mapeo uniforme de errores (`400/403/404/409`) | Completada |
-| 0.4 | Repositorios in-memory para desarrollo | Completada |
-| 0.5 | Test de integración smoke HTTP | Completada |
-
-## Fase A: APIs base
-Estado: `Completada`
-Rama de cierre: `phase/a-base-apis`
-
-### Subfases
-| Subfase | API | Estado |
-|---|---|---|
-| A.1 | `POST /households` | Completada |
-| A.2 | `POST /households/{householdId}/memberships` | Completada |
-| A.3 | `POST /households/{householdId}/categories` | Completada |
-| A.4 | Tests de integración de flujo A (create->invite->category) | Completada |
-
-## Fase B: APIs de participación
-Estado: `Completada`
-Rama de cierre: `phase/b-participation-apis`
-
-### Subfases
-| Subfase | API | Estado |
-|---|---|---|
-| B.1 | `PUT /households/{householdId}/categories/{categoryId}/preferences/{membershipId}` | Completada |
-| B.2 | `POST /households/{householdId}/category-participation-requests` | Completada |
-| B.3 | `POST /households/{householdId}/category-participation-requests/{requestId}/decision` | Completada |
-| B.4 | Tests de vigencia temporal y aprobación `ADMIN_ONLY` | Completada |
-
-## Fase C: API transaccional RegisterExpense
-Estado: `Completada`
-Rama de cierre: `phase/c-register-expense-api`
-
-### Subfases
-| Subfase | Entregable | Estado |
-|---|---|---|
-| C.1 | Use case `RegisterExpense` (application layer) | Completada |
-| C.2 | Algoritmo weighted split con suma exacta CLP | Completada |
-| C.3 | Soporte de `items` informativos | Completada |
-| C.4 | Snapshot inmutable de `ExpenseShare` | Completada |
-| C.5 | Unit tests casos 47.000 y 50.000 | Completada |
-| C.6 | Endpoint HTTP `POST /households/{householdId}/expenses` | Completada |
-| C.7 | Test de integración HTTP para RegisterExpense | Completada |
-
-Referencias:
-- `backend/src/application/use-cases/register-expense.use-case.ts`
-- `backend/src/domain/services/weighted-split-calculator.ts`
-- `backend/tests/register-expense.use-case.test.mjs`
-- `backend/tests/weighted-split-calculator.test.mjs`
-
-## Fase D: APIs de lectura
-Estado: `Completada`
-Rama de cierre: `dev`
-
-### Subfases
-| Subfase | API | Estado |
-|---|---|---|
-| D.1 | `GET /households/{householdId}/expenses` | Completada |
-| D.2 | `GET /households/{householdId}/balance` | Completada |
-| D.3 | Paginación estable por cursor | Completada |
-| D.4 | Tests de integración de lecturas por periodo | Completada |
-
-## Fase E: Persistencia Mongo real
-Estado: `Parcial`
-Rama de cierre: `dev` (en progreso)
-
-### Subfases
-| Subfase | Entregable | Estado |
-|---|---|---|
-| E.1 | Implementaciones Mongo de repositorios (ports) | Completada |
-| E.2 | Creación de índices principales | Completada |
-| E.3 | Configuración por ambiente (`dev/test/prod`) | Completada |
-| E.4 | Tests de integración con Mongo | Parcial |
-| E.5 | Migración de in-memory a Mongo en wiring de app | Completada |
-
-## Criterio para marcar una fase como completada
-1. APIs de la fase funcionando por HTTP.
-2. Tests automatizados de la fase en verde.
-3. Casos de borde críticos cubiertos.
-4. Documentación actualizada en `docs/`.
+1. Crear household y ADMIN inicial.
+2. Invitar memberships y crear categorías.
+3. Configurar preferencias y exclusiones temporales autoservicio.
+4. Registrar gastos con snapshot de reparto.
+5. Consultar gastos y balance por periodo.

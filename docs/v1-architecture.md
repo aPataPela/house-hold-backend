@@ -1,93 +1,45 @@
-# V1 Backend Architecture (Node + TypeScript)
+# Arquitectura backend V1
 
-## Decisión técnica (C)
-Se propone **Node.js + TypeScript sin framework pesado** (HTTP adapter minimal).
+Estado: implementada el 2026-06-18. Reorganizada el 2026-07-02.
 
-Razón breve:
-- Escala inicial baja/media (12 -> 200 usuarios) con foco en costo y simplicidad operativa.
-- Dominio y casos de uso desacoplados de transporte/persistencia.
-- Migrable luego a Express/Fastify/Nest sin tocar reglas de dominio.
+## Stack
 
-## Estructura de proyecto propuesta (C)
-```text
-backend/
-  package.json
-  tsconfig.json
-  src/
-    domain/
-      expense.ts
-      household.ts
-      membership.ts
-      category.ts
-      preferences.ts
-      participation-request.ts
-      services/
-        weighted-split-calculator.ts
-    application/
-      errors.ts
-      ports/
-        repositories.ts
-        services.ts
-      use-cases/
-        register-expense.use-case.ts
-    infrastructure/
-      http/
-        routes.md
-      persistence/
-        app-context.ts
-        create-app-context.ts
-        persistence-config.ts
-        in-memory/
-          create-in-memory-app-context.ts
-        mongo/
-          create-mongo-app-context.ts
-          mongo-repositories.ts
-          mongo-indexes.ts
-  tests/
-    weighted-split-calculator.test.mjs
-    register-expense.use-case.test.mjs
-```
+- Node.js 22, TypeScript estricto y Express 5.
+- Mongoose sobre MongoDB replica set.
+- Zod en el límite HTTP.
+- Helmet, CORS y Pino HTTP como middleware operativo.
+- Vitest, Supertest y MongoDB Memory Server para pruebas.
 
-## Diseño por capas y módulos (D)
-- `domain/`
-  - Entidades y reglas puras.
-  - Sin dependencias de framework/DB.
-  - Servicio de dominio: `WeightedSplitCalculator`.
+## Distribución de directorios
 
-- `application/`
-  - Orquestación de casos de uso.
-  - Validaciones de entrada y políticas transversales.
-  - Depende de puertos (`interfaces`) y del dominio.
+- `src/app/server.ts`: entrada local y base compilada para producción (`dist/app/server.js`).
+- `src/app`: configuración y arranque de la aplicación.
+  - `config`: variables de entorno.
+  - `http/middlewares`: validación, errores, 404 y async handler.
+  - `http/routes`: composición del router V1.
+  - `create-app.ts`: composición testeable de Express sin abrir puerto.
+  - `server.ts`: conexión Mongo, escucha y apagado.
+- `src/context`: módulos funcionales de la aplicación.
+  - `households`: households, memberships y categories.
+  - `participation`: preferencias y exclusiones autoservicio.
+  - `expenses`: gastos, listado y balance.
+  - `shared`: tipos, errores, serialización HTTP y utilidades comunes.
 
-- `infrastructure/`
-  - Adaptadores concretos (HTTP, Mongo, Firestore, etc.).
-  - Implementa interfaces de repositorio.
-  - Selecciona persistencia por ambiente (`IN_MEMORY` o `MONGO`) sin acoplar el dominio.
+Cada contexto sigue la estructura tradicional de Express:
 
-## Interfaces de repositorio (D)
-Definidas en `backend/src/application/ports/repositories.ts`.
+- `controllers`: adaptan HTTP a servicios y serializan respuestas.
+- `routes`: declaran endpoints, validación y controlador.
+- `services`: contienen reglas de negocio y acceso a modelos.
+- `validators`: schemas Zod para body/query.
+- `models`: schemas e índices Mongoose del contexto.
 
-Principales:
-- `HouseholdRepository`
-- `MembershipRepository`
-- `CategoryRepository`
-- `MemberCategoryPreferenceRepository`
-- `CategoryParticipationChangeRequestRepository`
-- `ExpenseRepository`
+Cuando existan nuevos dominios funcionales, por ejemplo `users` o `payments`, se agregan como nuevos módulos dentro de `src/context`.
 
-Servicios de aplicación:
-- `IdGenerator`
-- `Clock`
+## Decisiones
 
-## Persistencia por ambiente (Fase E)
-- `APP_PERSISTENCE_MODE=IN_MEMORY` (default) usa repositorios en memoria.
-- `APP_PERSISTENCE_MODE=MONGO` usa repositorios Mongo.
-- Configuración Mongo:
-  - `MONGO_URI`
-  - `MONGO_DB_NAME` (default `shared_household_expenses`)
-  - `MONGO_AUTO_CREATE_INDEXES` (`true` por defecto)
-
-## Inmutabilidad e histórico
-- `Expense.split.shares` se persiste como snapshot.
-- Cambios de preferencias/exclusiones futuras no alteran shares pasados.
-- Cancelación de gastos se modela por `status`.
+- CLP se almacena como entero.
+- Las fechas funcionales usan `YYYY-MM-DD` y se convierten a medianoche UTC.
+- Los shares son snapshots históricos y siempre suman el total.
+- El cursor de gastos es opaco y contiene `date + id`.
+- Crear household y ADMIN inicial usa una transacción.
+- Autenticación y JWT quedan fuera de V1.
