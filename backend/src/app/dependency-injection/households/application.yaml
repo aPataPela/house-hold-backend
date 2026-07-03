@@ -1,0 +1,20 @@
+services:
+  Service.Household:
+    class: ../../../context/households/services/household.service
+    main: HouseholdService
+    arguments: ["@App.Now"]
+
+  Controller.Household.Create:
+    class: ../../controllers/households/create/CreateHouseholdController
+    main: CreateHouseholdController
+    arguments: ["@Service.Household"]
+
+  Controller.Household.InviteMember:
+    class: ../../controllers/households/create/InviteMemberController
+    main: InviteMemberController
+    arguments: ["@Service.Household"]
+
+  Controller.Household.CreateCategory:
+    class: ../../controllers/households/create/CreateCategoryController
+    main: CreateCategoryController
+    arguments: ["@Service.Household"]

@@ -1,21 +1,53 @@
 {
-  "name": "shared-household-expenses-backend",
-  "version": "0.1.0",
+  "name": "household-backend",
+  "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/src/server.js",
-    "serve": "npm run build && npm run start",
-    "dev": "npm run serve",
+    "build": "npm run build:clean && npm run build:tsc && npm run build:di",
+    "dev": "npm run start:dev",
+    "debug": "npm run start:dev",
+    "build:clean": "rm -rf dist",
+    "build:tsc": "tsc -p tsconfig.json",
+    "build:di": "cpy \"src/**/*.{json,yaml}\" dist/src",
+    "start": "TS_NODE_BASEURL=./dist node -r tsconfig-paths/register ./dist/src/app/server/Index.js",
+    "start:dev": "nodemon --watch src --ext ts,tsx,json,yaml --exec \"node -r ts-node/register -r tsconfig-paths/register src/app/server/Index.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "npm run build && node --test tests/*.test.mjs",
-    "test:mongo": "npm run build && node --test tests/phase-e-mongo-integration.test.mjs"
+    "lint": "eslint .",
+    "format": "prettier --check .",
+    "test": "npm run build && vitest run",
+    "test:coverage": "npm run build && vitest run --coverage"
   },
   "dependencies": {
-    "mongodb": "^6.15.0"
+    "cors": "^2.8.5",
+    "cpy-cli": "^4.2.0",
+    "dotenv": "^16.0.0",
+    "express": "^5.2.1",
+    "glob": "^7.2.3",
+    "helmet": "^8.0.0",
+    "http-status": "^1.5.2",
+    "mongoose": "^8.0.0",
+    "node-dependency-injection": "^2.7.3",
+    "pino": "^9.0.0",
+    "pino-http": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "zod": "^3.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.6.3"
+    "@eslint/js": "^9.0.0",
+    "@types/cors": "^2.8.0",
+    "@types/express": "^5.0.6",
+    "@types/glob": "^7.2.0",
+    "@types/node": "^22.0.0",
+    "@types/supertest": "^6.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "eslint": "^9.0.0",
+    "mongodb-memory-server": "^10.0.0",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.0.0",
+    "supertest": "^7.0.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
   }
 }

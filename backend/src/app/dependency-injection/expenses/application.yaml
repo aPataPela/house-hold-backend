@@ -1,0 +1,20 @@
+services:
+  Service.Expense:
+    class: ../../../context/expenses/services/expense.service
+    main: ExpenseService
+    arguments: ["@App.Now"]
+
+  Controller.Expense.Register:
+    class: ../../controllers/expenses/create/RegisterExpenseController
+    main: RegisterExpenseController
+    arguments: ["@Service.Expense"]
+
+  Controller.Expense.List:
+    class: ../../controllers/expenses/find/ListExpensesController
+    main: ListExpensesController
+    arguments: ["@Service.Expense"]
+
+  Controller.Expense.Balance:
+    class: ../../controllers/expenses/find/GetBalanceController
+    main: GetBalanceController
+    arguments: ["@Service.Expense"]

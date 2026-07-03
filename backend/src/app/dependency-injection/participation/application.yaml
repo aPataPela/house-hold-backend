@@ -1,0 +1,20 @@
+services:
+  Service.Participation:
+    class: ../../../context/participation/services/participation.service
+    main: ParticipationService
+    arguments: ["@App.Now"]
+
+  Controller.Participation.SetPreference:
+    class: ../../controllers/participation/update/SetPreferenceController
+    main: SetPreferenceController
+    arguments: ["@Service.Participation"]
+
+  Controller.Participation.CreateExclusion:
+    class: ../../controllers/participation/create/CreateCategoryExclusionController
+    main: CreateCategoryExclusionController
+    arguments: ["@Service.Participation"]
+
+  Controller.Participation.CancelExclusion:
+    class: ../../controllers/participation/create/CancelCategoryExclusionController
+    main: CancelCategoryExclusionController
+    arguments: ["@Service.Participation"]

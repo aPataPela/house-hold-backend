@@ -1,0 +1,3 @@
+services:
+  Controller.Health:
+    class: ../../controllers/health/GetHealthController
