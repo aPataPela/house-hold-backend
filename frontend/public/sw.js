@@ -1,4 +1,4 @@
-const CACHE_NAME = "casa-viva-v3";
+const CACHE_NAME = "casa-viva-v4";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {

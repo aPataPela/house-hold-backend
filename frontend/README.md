@@ -50,7 +50,8 @@ La navegación prioriza cuatro casos de uso:
 
 - `Inicio`: saldo personal, gasto mensual y movimientos recientes.
 - `Gastos`: registro y consulta por mes y categoría.
-- `Reglas`: participación, media participación y pausas temporales por categoría.
+- `Reglas`: participación y media participación por categoría.
+- `Ausencias`: salidas temporales y liquidación mensual según días de presencia.
 - `Casa`: integrantes, invitación, ayuda y acceso secundario a tareas domésticas.
 
 Los períodos de gastos se calculan a partir del mes seleccionado. Los datos operativos se leen nuevamente desde la API; `localStorage` se limita a sesión, caché ligera del hogar y estado del tutorial.
@@ -59,7 +60,8 @@ Los períodos de gastos se calculan a partir del mes seleccionado. Los datos ope
 
 - `features/expenses`: listado y diálogo de registro de gastos.
 - `features/home`: resumen mensual.
-- `features/rules`: preferencias y exclusiones temporales.
+- `features/rules`: preferencias de participación.
+- `features/absences`: ausencias temporales y liquidación mensual.
 - `features/tutorial`: configuración declarativa y diálogo accesible de la guía.
 - `lib/domain.ts`: contratos compartidos del frontend.
 - `lib/date.ts` y `lib/format.ts`: fechas y presentación de datos.

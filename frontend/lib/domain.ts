@@ -1,4 +1,4 @@
-export type AppSection = "home" | "expenses" | "rules" | "house";
+export type AppSection = "home" | "expenses" | "rules" | "absences" | "house";
 
 export type Session = {
   user: { userId: string; name: string; email: string };
@@ -146,19 +146,41 @@ export type Preference = {
   validTo: string | null;
 };
 
-export type CategoryExclusion = {
-  exclusionId: string;
+export type Absence = {
+  absenceId: string;
   membershipId: string;
-  categoryId: string;
   status: "ACTIVE" | "CANCELLED";
   periodStart: string;
   periodEnd: string;
   reason?: string;
+  audit: {
+    createdByMembershipId: string;
+    createdAt: string;
+    cancelledByMembershipId?: string;
+    cancelledAt?: string;
+  };
 };
 
 export type ParticipationRules = {
   preferences: Preference[];
-  exclusions: CategoryExclusion[];
+};
+
+export type MonthlySettlement = {
+  householdId: string;
+  month: string;
+  totalAmount: number;
+  daysInMonth: number;
+  totalMemberDays: number;
+  totalAbsenceDays: number;
+  totalPresenceDays: number;
+  dailyAmount: number;
+  members: Array<{
+    membershipId: string;
+    memberDays: number;
+    absenceDays: number;
+    presenceDays: number;
+    assignedAmount: number;
+  }>;
 };
 
 export type PreferenceDraft = {
@@ -175,13 +197,14 @@ export type PreferenceDraft = {
   validTo: string | null;
 };
 
-export type ExclusionDraft = {
-  categoryId: string;
+export type AbsenceDraft = {
   membershipId: string;
   periodStart: string;
   periodEnd: string;
   reason?: string;
 };
+
+export type ExclusionDraft = AbsenceDraft;
 
 export type StoredData = {
   members: Member[];

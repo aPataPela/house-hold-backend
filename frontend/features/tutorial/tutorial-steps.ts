@@ -1,6 +1,6 @@
 import type { AppSection } from "@/lib/domain";
 
-export const TUTORIAL_VERSION = 1;
+export const TUTORIAL_VERSION = 2;
 
 export type TutorialStep = {
   id: string;
@@ -36,6 +36,13 @@ const tutorialSteps: TutorialStep[] = [
     title: "Un reparto más justo",
     message:
       "En Reglas defines quién participa y cuánto aporta en cada categoría.",
+  },
+  {
+    id: "absences",
+    section: "absences",
+    title: "Ausencias de convivencia",
+    message:
+      "En Ausencias registras salidas por rango de fechas y revisas la liquidación mensual.",
   },
   {
     id: "house",

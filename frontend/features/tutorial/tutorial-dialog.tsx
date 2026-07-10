@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarOff,
   Check,
   Home,
   ReceiptText,
@@ -17,6 +18,7 @@ const sectionIcons = {
   home: Home,
   expenses: ReceiptText,
   rules: SlidersHorizontal,
+  absences: CalendarOff,
   house: Users,
 } satisfies Record<AppSection, typeof Home>;
 

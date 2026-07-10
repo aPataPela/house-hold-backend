@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   Check,
   ChevronDown,
+  CalendarOff,
   CookingPot,
   HelpCircle,
   Home,
@@ -21,6 +22,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ExpenseDialog } from "@/features/expenses/expense-dialog";
 import { ExpensesView } from "@/features/expenses/expenses-view";
 import { PaymentDialog } from "@/features/expenses/payment-dialog";
+import { AbsencesView } from "@/features/absences/absences-view";
 import { HomeView } from "@/features/home/home-view";
 import { RulesView } from "@/features/rules/rules-view";
 import { TutorialDialog } from "@/features/tutorial/tutorial-dialog";
@@ -40,16 +42,18 @@ import type {
   AppSection,
   AuthResponse,
   Balance,
+  Absence,
+  AbsenceDraft,
   Category,
   ChoreTask,
   ChoreWeek,
   ChoreWeekTask,
   CommonArea,
-  ExclusionDraft,
   Expense,
   ExpenseDraft,
   ExpensePaymentDraft,
   Member,
+  MonthlySettlement,
   ParticipationRules,
   PreferenceDraft,
   Session,
@@ -67,7 +71,7 @@ const defaultData: StoredData = {
   tasks: [],
 };
 
-const emptyRules: ParticipationRules = { preferences: [], exclusions: [] };
+const emptyRules: ParticipationRules = { preferences: [] };
 
 export default function HomePage() {
   const [tab, setTab] = useState<AppSection>("home");
@@ -77,6 +81,8 @@ export default function HomePage() {
   const [week, setWeek] = useState<ChoreWeek | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balance, setBalance] = useState<Balance | null>(null);
+  const [absences, setAbsences] = useState<Absence[]>([]);
+  const [settlement, setSettlement] = useState<MonthlySettlement | null>(null);
   const [rules, setRules] = useState<ParticipationRules>(emptyRules);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthValue);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
@@ -172,6 +178,25 @@ export default function HomePage() {
     [],
   );
 
+  const loadAbsenceData = useCallback(
+    async (activeSession: Session, month: string) => {
+      const period = monthRange(month);
+      const [absenceResult, settlementResult] = await Promise.all([
+        apiRequest<{ absences: Absence[] }>(
+          `/api/v1/households/${activeSession.householdId}/absences?from=${period.from}&to=${period.to}`,
+          { accessToken: activeSession.accessToken },
+        ),
+        apiRequest<MonthlySettlement>(
+          `/api/v1/households/${activeSession.householdId}/monthly-settlement?month=${month}`,
+          { accessToken: activeSession.accessToken },
+        ),
+      ]);
+      setAbsences(absenceResult.absences);
+      setSettlement(settlementResult);
+    },
+    [],
+  );
+
   const loadRules = useCallback(async (activeSession: Session) => {
     const result = await apiRequest<ParticipationRules>(
       `/api/v1/households/${activeSession.householdId}/participation-rules?on=${dateInputValue()}`,
@@ -257,6 +282,14 @@ export default function HomePage() {
     }, 0);
     return () => window.clearTimeout(timeout);
   }, [hasHousehold, loadExpenseData, run, selectedMonth, session]);
+
+  useEffect(() => {
+    if (!hasHousehold || !session) return;
+    const timeout = window.setTimeout(() => {
+      void run(() => loadAbsenceData(session, selectedMonth), { silent: true });
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [hasHousehold, loadAbsenceData, run, selectedMonth, session]);
 
   useEffect(() => {
     if (!session?.householdId) return;
@@ -469,11 +502,11 @@ export default function HomePage() {
     });
   };
 
-  const createExclusion = async (draft: ExclusionDraft) => {
+  const createAbsence = async (draft: AbsenceDraft) => {
     if (!hasHousehold || !session) return false;
     return run(async () => {
       await apiRequest(
-        `/api/v1/households/${session.householdId}/category-exclusions`,
+        `/api/v1/households/${session.householdId}/absences`,
         {
           method: "POST",
           accessToken: session.accessToken,
@@ -483,16 +516,16 @@ export default function HomePage() {
           }),
         },
       );
-      await loadRules(session);
-      setMessage("Pausa guardada.");
+      await loadAbsenceData(session, selectedMonth);
+      setMessage("Ausencia guardada.");
     });
   };
 
-  const cancelExclusion = async (exclusionId: string) => {
+  const cancelAbsence = async (absenceId: string) => {
     if (!hasHousehold || !session) return false;
     return run(async () => {
       await apiRequest(
-        `/api/v1/households/${session.householdId}/category-exclusions/${exclusionId}/cancel`,
+        `/api/v1/households/${session.householdId}/absences/${absenceId}/cancel`,
         {
           method: "POST",
           accessToken: session.accessToken,
@@ -501,8 +534,8 @@ export default function HomePage() {
           }),
         },
       );
-      await loadRules(session);
-      setMessage("Pausa cancelada.");
+      await loadAbsenceData(session, selectedMonth);
+      setMessage("Ausencia cancelada.");
     });
   };
 
@@ -622,6 +655,8 @@ export default function HomePage() {
     setWeek(null);
     setExpenses([]);
     setBalance(null);
+    setAbsences([]);
+    setSettlement(null);
     setRules(emptyRules);
     setTutorialOpen(false);
     setTab("home");
@@ -739,8 +774,21 @@ export default function HomePage() {
                     loading={loading}
                     onCreateCategory={createCategory}
                     onSetPreference={setPreference}
-                    onCreateExclusion={createExclusion}
-                    onCancelExclusion={cancelExclusion}
+                  />
+                )}
+                {tab === "absences" && (
+                  <AbsencesView
+                    members={data.members}
+                    absences={absences}
+                    settlement={settlement}
+                    selectedMonth={selectedMonth}
+                    onMonthChange={setSelectedMonth}
+                    currentMembershipId={session.currentMembershipId!}
+                    canManageHouse={canManageHouse}
+                    loading={loading}
+                    onCreateAbsence={createAbsence}
+                    onCancelAbsence={cancelAbsence}
+                    memberName={getMemberName}
                   />
                 )}
                 {tab === "house" && (
@@ -782,6 +830,12 @@ export default function HomePage() {
                 label="Reglas"
                 active={tab === "rules"}
                 onClick={() => setTab("rules")}
+              />
+              <NavButton
+                icon={CalendarOff}
+                label="Ausencias"
+                active={tab === "absences"}
+                onClick={() => setTab("absences")}
               />
               <NavButton
                 icon={Users}
