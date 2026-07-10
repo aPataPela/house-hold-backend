@@ -9,6 +9,18 @@ const now = () => new Date("2026-01-01T12:00:00.000Z");
 const app = createApp({ now, logging: false });
 let mongo: MongoMemoryReplSet;
 
+const registerUser = async (input: { name: string; email: string; password?: string }) => {
+  const response = await request(app)
+    .post("/api/v1/auth/register")
+    .send({ password: "super-secret", ...input })
+    .expect(201);
+  return response.body as {
+    user: { userId: string; email: string };
+    accessToken: string;
+    refreshToken: string;
+  };
+};
+
 beforeAll(async () => {
   mongo = await MongoMemoryReplSet.create({ replSet: { count: 1, ip: "127.0.0.1" } });
   await mongoose.connect(mongo.getUri(), { dbName: "household_test" });
@@ -64,18 +76,6 @@ describe("HTTP foundation", () => {
 });
 
 describe("Auth and household onboarding", () => {
-  const registerUser = async (input: { name: string; email: string; password?: string }) => {
-    const response = await request(app)
-      .post("/api/v1/auth/register")
-      .send({ password: "super-secret", ...input })
-      .expect(201);
-    return response.body as {
-      user: { userId: string; email: string };
-      accessToken: string;
-      refreshToken: string;
-    };
-  };
-
   it("registers users, rejects duplicate email and validates login", async () => {
     const registered = await registerUser({ name: "Claudia", email: "CLAUDIA@mail.com" });
     expect(registered.user.email).toBe("claudia@mail.com");
@@ -137,11 +137,13 @@ describe("Auth and household onboarding", () => {
     const joined = await request(app)
       .post("/api/v1/households/join")
       .set("Authorization", `Bearer ${member.accessToken}`)
-      .send({ inviteCode: created.body.inviteCode })
+      .send({ inviteCode: created.body.inviteCode, livingSince: "2026-02-01" })
       .expect(201);
     expect(joined.body.membership.role).toBe("MEMBER");
     expect(joined.body.membership.householdId).toBe(created.body.householdId);
     expect(joined.body.membership.userName).toBe("Member");
+    expect(joined.body.membership.joinedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(joined.body.membership.livingSince).toBe("2026-02-01T00:00:00.000Z");
 
     await request(app)
       .post(`/api/v1/households/${created.body.householdId}/categories`)
@@ -194,6 +196,7 @@ describe("Auth and household onboarding", () => {
       .expect(200);
     expect(me.body.memberships).toHaveLength(1);
     expect(me.body.memberships[0].householdId).toBe(created.body.householdId);
+    expect(me.body.memberships[0].livingSince).toBe("2026-02-01T00:00:00.000Z");
 
     await request(app)
       .post(`/api/v1/households/${created.body.householdId}/invite-code/regenerate`)
@@ -212,6 +215,24 @@ describe("Auth and household onboarding", () => {
       .set("Authorization", `Bearer ${admin.accessToken}`)
       .send({ inviteCode: "BAD123" })
       .expect(404);
+  });
+
+  it("accepts past livingSince dates when joining by invite code", async () => {
+    const admin = await registerUser({ name: "Admin", email: "past-admin@mail.com" });
+    const created = await request(app)
+      .post("/api/v1/households")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ name: "Casa Pasada", currency: "CLP" })
+      .expect(201);
+    const member = await registerUser({ name: "Member", email: "past-member@mail.com" });
+    const joined = await request(app)
+      .post("/api/v1/households/join")
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .send({ inviteCode: created.body.inviteCode, livingSince: "2025-12-15" })
+      .expect(201);
+
+    expect(joined.body.membership.livingSince).toBe("2025-12-15T00:00:00.000Z");
+    expect(joined.body.membership.householdId).toBe(created.body.householdId);
   });
 
   it("lists current participation rules only for household members", async () => {
@@ -371,6 +392,121 @@ describe("V1 flow", () => {
     ).toBe(0);
   });
 
+  it("reconciles auto-weighted expenses when a member joins with a retroactive livingSince", async () => {
+    const admin = await registerUser({ name: "Admin", email: "retro-admin@mail.com" });
+    const created = await request(app)
+      .post("/api/v1/households")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ name: "Casa Retro", currency: "CLP", livingSince: "2025-12-01" })
+      .expect(201);
+    const category = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/categories`)
+      .send({ name: "Feria", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+
+    const expense = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/expenses`)
+      .send({
+        categoryId: category.body.categoryId,
+        payerMembershipId: created.body.creatorMembershipId,
+        actorMembershipId: created.body.creatorMembershipId,
+        date: "2025-12-20",
+        totalAmount: 10000,
+        split: { mode: "AUTO_WEIGHTED" },
+      })
+      .expect(201);
+    expect(expense.body.split.shares).toHaveLength(1);
+
+    const member = await registerUser({ name: "Member", email: "retro-member@mail.com" });
+    const invited = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/memberships`)
+      .send({
+        userId: member.user.userId,
+        role: "MEMBER",
+        invitedByMembershipId: created.body.creatorMembershipId,
+        livingSince: "2025-12-10",
+      })
+      .expect(201);
+    const memberMembershipId = invited.body.membershipId as string;
+
+    const reloaded = await request(app)
+      .get(`/api/v1/households/${created.body.householdId}/expenses?from=2025-12-01&to=2026-01-01`)
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .expect(200);
+    expect(reloaded.body.expenses[0].split.shares.map((share: { membershipId: string }) => share.membershipId)).toEqual([
+      created.body.creatorMembershipId,
+      memberMembershipId,
+    ]);
+    expect(reloaded.body.expenses[0].split.shares).toEqual([
+      { membershipId: created.body.creatorMembershipId, assignedAmount: 5000, weightUsed: 1 },
+      { membershipId: memberMembershipId, assignedAmount: 5000, weightUsed: 1 },
+    ]);
+    expect(reloaded.body.expenses[0].settlement.shares).toEqual([
+      expect.objectContaining({ membershipId: created.body.creatorMembershipId, assignedAmount: 5000, status: "PAID" }),
+      expect.objectContaining({ membershipId: memberMembershipId, assignedAmount: 5000, status: "PENDING" }),
+    ]);
+  });
+
+  it("excludes future members from expense splits until their livingSince date", async () => {
+    const admin = await registerUser({ name: "Admin", email: "future-expenses-admin@mail.com" });
+    const created = await request(app)
+      .post("/api/v1/households")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ name: "Casa Gasto Futuro", currency: "CLP", livingSince: "2025-12-01" })
+      .expect(201);
+    const category = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/categories`)
+      .send({ name: "Feria", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+    const futureMember = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/memberships`)
+      .send({
+        userId: "usr_3",
+        role: "MEMBER",
+        invitedByMembershipId: created.body.creatorMembershipId,
+        livingSince: "2026-01-01",
+      })
+      .expect(201);
+
+    const beforeLivingSince = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/expenses`)
+      .send({
+        categoryId: category.body.categoryId,
+        payerMembershipId: created.body.creatorMembershipId,
+        actorMembershipId: created.body.creatorMembershipId,
+        date: "2025-12-31",
+        totalAmount: 50000,
+        split: { mode: "AUTO_WEIGHTED" },
+      })
+      .expect(201);
+    expect(beforeLivingSince.body.split.shares).toHaveLength(1);
+    expect(beforeLivingSince.body.split.shares[0].membershipId).toBe(created.body.creatorMembershipId);
+
+    const afterLivingSince = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/expenses`)
+      .send({
+        categoryId: category.body.categoryId,
+        payerMembershipId: created.body.creatorMembershipId,
+        actorMembershipId: created.body.creatorMembershipId,
+        date: "2026-01-01",
+        totalAmount: 50000,
+        split: { mode: "AUTO_WEIGHTED" },
+      })
+      .expect(201);
+    expect(afterLivingSince.body.split.shares.map((share: { membershipId: string }) => share.membershipId)).toEqual([
+      created.body.creatorMembershipId,
+      futureMember.body.membershipId,
+    ]);
+
+    const balance = await request(app)
+      .get(`/api/v1/households/${created.body.householdId}/balance?from=2025-12-01&to=2026-02-01`)
+      .expect(200);
+    const futureRow = balance.body.members.find(
+      (row: { membershipId: string }) => row.membershipId === futureMember.body.membershipId,
+    );
+    expect(futureRow.assigned).toBe(25000);
+  });
+
   it("registers partial and full payments for an expense share", async () => {
     const setup = await bootstrap();
     const expense = await request(app)
@@ -430,7 +566,7 @@ describe("V1 flow", () => {
       .expect(201);
 
     const balance = await request(app)
-      .get(`/api/v1/households/${setup.householdId}/balance?from=2025-12-01&to=2026-01-01`)
+      .get(`/api/v1/households/${setup.householdId}/balance?from=2025-12-01&to=2026-01-02`)
       .expect(200);
     const memberRow = balance.body.members.find(
       (row: { membershipId: string }) => row.membershipId === setup.memberId,
@@ -624,10 +760,20 @@ describe("V1 flow", () => {
 });
 
 describe("Household chores", () => {
-  const inviteMember = async (householdId: string, adminId: string, userId: string) => {
+  const inviteMember = async (
+    householdId: string,
+    adminId: string,
+    userId: string,
+    livingSince?: string,
+  ) => {
     const response = await request(app)
       .post(`/api/v1/households/${householdId}/memberships`)
-      .send({ userId, role: "MEMBER", invitedByMembershipId: adminId })
+      .send({
+        userId,
+        role: "MEMBER",
+        invitedByMembershipId: adminId,
+        ...(livingSince ? { livingSince } : {}),
+      })
       .expect(201);
     return response.body.membershipId as string;
   };
@@ -756,6 +902,39 @@ describe("Household chores", () => {
     expect(
       completed.body.tasks.find((task: { name: string }) => task.name === "Mantener baño").weeklyStatus,
     ).toBe("DONE");
+  });
+
+  it("skips members whose livingSince date is in the future when generating chores", async () => {
+    const admin = await registerUser({ name: "Admin", email: "future-chores-admin@mail.com" });
+    const created = await request(app)
+      .post("/api/v1/households")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ name: "Casa Tareas Futuras", currency: "CLP", livingSince: "2025-12-01" })
+      .expect(201);
+    const futureMemberId = await inviteMember(
+      created.body.householdId,
+      created.body.creatorMembershipId,
+      "usr_3",
+      "2026-01-06",
+    );
+    const kitchen = await createArea(created.body.householdId, created.body.creatorMembershipId, "Cocina");
+    await createTask(created.body.householdId, created.body.creatorMembershipId, kitchen, {
+      name: "Limpiar cocina",
+      priority: 1,
+      assigneeLimit: 1,
+    });
+
+    const before = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/chores/weeks`)
+      .send({ weekStart: "2026-01-05", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+    expect(before.body.tasks[0].assignments[0].membershipId).toBe(created.body.creatorMembershipId);
+
+    const after = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/chores/weeks`)
+      .send({ weekStart: "2026-01-12", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+    expect(after.body.tasks[0].assignments[0].membershipId).toBe(futureMemberId);
   });
 
   it("generates weeks idempotently and rotates repeated chore assignments", async () => {

@@ -32,6 +32,7 @@ import { apiRequest } from "@/lib/api";
 import {
   currentMonthValue,
   dateInputValue,
+  formatShortDate,
   monthLabel,
   monthRange,
 } from "@/lib/date";
@@ -323,7 +324,7 @@ export default function HomePage() {
       }>("/api/v1/households", {
         method: "POST",
         accessToken: session.accessToken,
-        body: JSON.stringify({ name, currency: "CLP" }),
+        body: JSON.stringify({ name, currency: "CLP", livingSince: dateInputValue() }),
       });
       const member: Member = {
         membershipId: result.creatorMembershipId,
@@ -331,6 +332,8 @@ export default function HomePage() {
         userId: session.user.userId,
         userName: session.user.name,
         role: "ADMIN",
+        joinedAt: new Date().toISOString(),
+        livingSince: dateInputValue(),
       };
       const nextSession: Session = {
         ...session,
@@ -347,7 +350,7 @@ export default function HomePage() {
     });
   };
 
-  const joinHousehold = async (inviteCode: string) => {
+  const joinHousehold = async (inviteCode: string, livingSince: string) => {
     if (!session) return false;
     return run(async () => {
       const result = await apiRequest<{
@@ -356,7 +359,7 @@ export default function HomePage() {
       }>("/api/v1/households/join", {
         method: "POST",
         accessToken: session.accessToken,
-        body: JSON.stringify({ inviteCode }),
+        body: JSON.stringify({ inviteCode, livingSince }),
       });
       const nextSession: Session = {
         ...session,
@@ -934,7 +937,7 @@ function OnboardingView({
 }: {
   userName: string;
   createHousehold: (name: string) => Promise<boolean>;
-  joinHousehold: (code: string) => Promise<boolean>;
+  joinHousehold: (code: string, livingSince: string) => Promise<boolean>;
   logout: () => void;
   message: string | null;
   loading: boolean;
@@ -942,16 +945,18 @@ function OnboardingView({
   const [mode, setMode] = useState<"create" | "join">("create");
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const value = String(
-      form.get(mode === "create" ? "householdName" : "inviteCode") ?? "",
+      formData.get(mode === "create" ? "householdName" : "inviteCode") ?? "",
     ).trim();
+    const livingSince = String(formData.get("livingSince") ?? dateInputValue()).trim();
     if (!value) return;
     const saved =
       mode === "create"
         ? await createHousehold(value)
-        : await joinHousehold(value.toUpperCase());
-    if (saved) event.currentTarget.reset();
+        : await joinHousehold(value.toUpperCase(), livingSince);
+    if (saved) form.reset();
   };
   return (
     <div className="setup-screen">
@@ -985,15 +990,21 @@ function OnboardingView({
             <input name="householdName" placeholder="Casa Ñuñoa" required />
           </label>
         ) : (
-          <label>
-            Código de invitación
-            <input
-              name="inviteCode"
-              autoCapitalize="characters"
-              placeholder="ABCD12"
-              required
-            />
-          </label>
+          <>
+            <label>
+              Código de invitación
+              <input
+                name="inviteCode"
+                autoCapitalize="characters"
+                placeholder="ABCD12"
+                required
+              />
+            </label>
+            <label>
+              Conviven desde
+              <input name="livingSince" type="date" defaultValue={dateInputValue()} required />
+            </label>
+          </>
         )}
         <button className="primary-action full-action" disabled={loading}>
           {mode === "create" ? "Crear casa" : "Entrar a la casa"}
@@ -1063,6 +1074,7 @@ function HouseView({
                 <p>
                   {member.role === "ADMIN" ? "Administrador" : "Integrante"}
                 </p>
+                <small>Convive desde {formatShortDate(member.livingSince)}</small>
               </div>
             </div>
           ))}

@@ -9,6 +9,7 @@ import type {
 } from "../../shared/types/entities";
 import { badRequest, conflict, forbidden, notFound } from "../../shared/errors/app-error";
 import { parseDate } from "../../shared/utils/date";
+import { activeMembershipCriteria, effectiveMembershipStart } from "../../shared/utils/membership";
 import { HouseholdModel } from "../../households/models/household.model";
 import { MembershipModel } from "../../households/models/membership.model";
 import { CommonAreaModel } from "../models/common-area.model";
@@ -203,7 +204,9 @@ export class ChoreService {
   ): Promise<ChoreAssignment[]> {
     const history = await this.getHistory(week.householdId, week.weekStart);
     const availableMembers = [...members].sort(
-      (a, b) => a.joinedAt.getTime() - b.joinedAt.getTime() || a.id.localeCompare(b.id),
+      (a, b) =>
+        effectiveMembershipStart(a).getTime() - effectiveMembershipStart(b).getTime() ||
+        a.id.localeCompare(b.id),
     );
     const assigned = new Set<string>();
     const assignments: ChoreAssignment[] = [];
@@ -319,9 +322,7 @@ export class ChoreService {
       await MembershipModel.findOne({
         _id: membershipId,
         householdId,
-        status: "ACTIVE",
-        joinedAt: { $lte: date },
-        $or: [{ leftAt: null }, { leftAt: { $gt: date } }, { leftAt: { $exists: false } }],
+        ...activeMembershipCriteria(date),
       }).lean(),
     );
   }
@@ -334,12 +335,7 @@ export class ChoreService {
 
   private async findActiveMembers(householdId: string, date: Date) {
     return plain<Membership[]>(
-      await MembershipModel.find({
-        householdId,
-        status: "ACTIVE",
-        joinedAt: { $lte: date },
-        $or: [{ leftAt: null }, { leftAt: { $gt: date } }, { leftAt: { $exists: false } }],
-      }).lean(),
+      await MembershipModel.find({ householdId, ...activeMembershipCriteria(date) }).lean(),
     );
   }
 

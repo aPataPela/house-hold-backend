@@ -11,6 +11,7 @@ const expensePaymentSchema = new Schema(
     amount: { type: Number, required: true },
     createdByMembershipId: { type: String, required: true },
     createdAt: { type: Date, required: true },
+    kind: String,
   },
   { versionKey: false },
 );

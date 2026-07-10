@@ -19,6 +19,8 @@ export type Member = {
   userId: string;
   userName?: string;
   role: "ADMIN" | "MEMBER";
+  joinedAt: string;
+  livingSince: string;
 };
 
 export type Category = {

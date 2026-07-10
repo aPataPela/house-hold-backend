@@ -34,9 +34,10 @@ export function addDays(value: string, days: number): string {
 }
 
 export function formatShortDate(value: string): string {
+  const normalized = value.includes("T") ? value.slice(0, 10) : value;
   return new Intl.DateTimeFormat("es-CL", {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00.000Z`));
+  }).format(new Date(`${normalized}T00:00:00.000Z`));
 }

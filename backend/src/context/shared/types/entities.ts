@@ -37,6 +37,7 @@ export interface Membership {
   role: Role;
   status: "ACTIVE" | "INACTIVE";
   joinedAt: Date;
+  livingSince?: Date | null;
   leftAt?: Date | null;
 }
 
@@ -94,6 +95,7 @@ export interface ExpensePayment {
   amount: number;
   createdByMembershipId: string;
   createdAt: Date;
+  kind?: "AUTO_PAYER_SETTLEMENT" | "MANUAL";
 }
 
 export interface ExpenseShareSettlement extends ExpenseShare {

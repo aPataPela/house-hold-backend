@@ -12,6 +12,7 @@ export class JoinHouseholdController implements BaseController {
     const result = await this.service.joinByInviteCode({
       inviteCode: req.body.inviteCode,
       userId: (req as AuthenticatedRequest).user.id,
+      livingSince: req.body.livingSince,
     });
     res.status(201).json({
       household: householdResponse(result.household, result.membership.id),

@@ -10,6 +10,7 @@ const membershipSchema = new Schema(
     role: String,
     status: String,
     joinedAt: Date,
+    livingSince: Date,
     leftAt: Date,
   },
   { versionKey: false },

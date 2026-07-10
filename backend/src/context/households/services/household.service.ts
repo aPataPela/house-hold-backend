@@ -2,25 +2,35 @@ import { randomInt, randomUUID } from "node:crypto";
 import mongoose from "mongoose";
 import type { Category, Household, Membership, Role } from "../../shared/types/entities";
 import { badRequest, conflict, forbidden, notFound } from "../../shared/errors/app-error";
+import { activeMembershipCriteria } from "../../shared/utils/membership";
+import { parseDate, toDateString } from "../../shared/utils/date";
 import { CategoryModel } from "../models/category.model";
 import { HouseholdModel } from "../models/household.model";
 import { MembershipModel } from "../models/membership.model";
 import { UserModel } from "../../users/models/user.model";
+import type { ExpenseService } from "../../expenses/services/expense.service";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 export class HouseholdService {
-  constructor(private readonly now = () => new Date()) {}
+  constructor(
+    private readonly now = () => new Date(),
+    private readonly expenseService?: ExpenseService,
+  ) {}
 
   async create(input: {
     name: string;
     currency: "CLP";
     createdByUserId?: string;
+    livingSince?: string;
   }): Promise<{ household: Household; membership: Membership }> {
     if (!input.createdByUserId) throw badRequest("MISSING_USER", "createdByUserId is required");
     const now = this.now();
+    const livingSince = input.livingSince
+      ? parseDate(input.livingSince, "livingSince")
+      : parseDate(toDateString(now), "livingSince");
     const household: Household = {
       id: id("hh"),
       name: input.name.trim(),
@@ -36,6 +46,7 @@ export class HouseholdService {
       role: "ADMIN",
       status: "ACTIVE",
       joinedAt: now,
+      livingSince,
     };
     const session = await mongoose.startSession();
     try {
@@ -49,23 +60,29 @@ export class HouseholdService {
     return { household, membership };
   }
 
-  async joinByInviteCode(input: { inviteCode: string; userId: string }) {
+  async joinByInviteCode(input: { inviteCode: string; userId: string; livingSince?: string }) {
     const inviteCode = input.inviteCode.trim().toLocaleUpperCase("en");
     const household = plain<Household | null>(await HouseholdModel.findOne({ inviteCode }).lean());
     if (!household) throw notFound("invite code");
     if (await this.findActiveMembershipByUser(household.id, input.userId)) {
       throw conflict("MEMBERSHIP_EXISTS", "user already has an active membership");
     }
+    const now = this.now();
+    const livingSince = input.livingSince
+      ? parseDate(input.livingSince, "livingSince")
+      : parseDate(toDateString(now), "livingSince");
     const membership: Membership = {
       id: id("m"),
       householdId: household.id,
       userId: input.userId,
       role: "MEMBER",
       status: "ACTIVE",
-      joinedAt: this.now(),
+      joinedAt: now,
+      livingSince,
     };
     await MembershipModel.create({ ...membership, _id: membership.id });
     const user = plain<{ name: string } | null>(await UserModel.findById(input.userId).lean());
+    await this.reconcileExpenses(household.id, livingSince);
     return { household, membership: { ...membership, ...(user ? { userName: user.name } : {}) } };
   }
 
@@ -85,22 +102,31 @@ export class HouseholdService {
     return household;
   }
 
-  async invite(householdId: string, input: { userId: string; role: Role; invitedByMembershipId: string }) {
+  async invite(
+    householdId: string,
+    input: { userId: string; role: Role; invitedByMembershipId: string; livingSince?: string },
+  ) {
     if (!(await this.findHousehold(householdId))) throw notFound("household");
     const actor = await this.findActiveMembership(input.invitedByMembershipId, householdId);
     if (!actor || actor.role !== "ADMIN") throw forbidden("only an active ADMIN can invite members");
     if (await this.findActiveMembershipByUser(householdId, input.userId)) {
       throw conflict("MEMBERSHIP_EXISTS", "user already has an active membership");
     }
+    const now = this.now();
+    const livingSince = input.livingSince
+      ? parseDate(input.livingSince, "livingSince")
+      : parseDate(toDateString(now), "livingSince");
     const membership: Membership = {
       id: id("m"),
       householdId,
       userId: input.userId,
       role: input.role,
       status: "ACTIVE",
-      joinedAt: this.now(),
+      joinedAt: now,
+      livingSince,
     };
     await MembershipModel.create({ ...membership, _id: membership.id });
+    await this.reconcileExpenses(householdId, livingSince);
     return membership;
   }
 
@@ -131,7 +157,9 @@ export class HouseholdService {
       throw forbidden("an active membership is required");
     }
     const memberships = plain<Membership[]>(
-      await MembershipModel.find({ householdId, status: "ACTIVE" }).sort({ joinedAt: 1 }).lean(),
+      await MembershipModel.find({ householdId, status: "ACTIVE" })
+        .sort({ joinedAt: 1 })
+        .lean(),
     );
     const users = plain<Array<{ id: string; name: string }>>(
       await UserModel.find({ _id: { $in: memberships.map((membership) => membership.userId) } }).lean(),
@@ -141,6 +169,7 @@ export class HouseholdService {
       const userName = userNames.get(membership.userId);
       return {
         ...membership,
+        livingSince: membership.livingSince ?? membership.joinedAt,
         ...(userName ? { userName } : {}),
       };
     });
@@ -165,9 +194,7 @@ export class HouseholdService {
       await MembershipModel.findOne({
         _id: id,
         householdId,
-        status: "ACTIVE",
-        joinedAt: { $lte: date },
-        $or: [{ leftAt: null }, { leftAt: { $gt: date } }, { leftAt: { $exists: false } }],
+        ...activeMembershipCriteria(date),
       }).lean(),
     );
   }
@@ -191,5 +218,10 @@ export class HouseholdService {
       if (!(await HouseholdModel.exists({ inviteCode: code }))) return code;
     }
     throw conflict("INVITE_CODE_COLLISION", "could not generate a unique invite code");
+  }
+
+  private async reconcileExpenses(householdId: string, livingSince: Date) {
+    if (!this.expenseService) return;
+    await this.expenseService.reconcileExpensesAfterLivingSinceChange(householdId, livingSince);
   }
 }

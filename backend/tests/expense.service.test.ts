@@ -340,4 +340,80 @@ describe("ExpenseService", () => {
       { membershipId: payerId, paid: 10000, assigned: 10000, netBalance: 0 },
     ]);
   });
+
+  it("includes members whose livingSince is before the expense date and allows payment", async () => {
+    const now = () => new Date("2026-07-10T12:00:00.000Z");
+    const service = new ExpenseService(now);
+    const householdId = "hh_living_since";
+    const categoryId = "cat_living_since";
+    const adminId = "m_admin";
+    const memberId = "m_member";
+    const createdAt = now();
+
+    await HouseholdModel.create({
+      _id: householdId,
+      id: householdId,
+      name: "Casa Convivencia",
+      currency: "CLP",
+      approvalMode: "ADMIN_ONLY",
+      createdAt,
+    });
+    await MembershipModel.create([
+      {
+        _id: adminId,
+        id: adminId,
+        householdId,
+        userId: "usr_admin",
+        role: "ADMIN",
+        status: "ACTIVE",
+        joinedAt: new Date("2026-06-01T00:00:00.000Z"),
+        livingSince: new Date("2026-06-01T00:00:00.000Z"),
+      },
+      {
+        _id: memberId,
+        id: memberId,
+        householdId,
+        userId: "usr_member",
+        role: "MEMBER",
+        status: "ACTIVE",
+        joinedAt: new Date("2026-07-01T00:00:00.000Z"),
+        livingSince: new Date("2026-07-01T00:00:00.000Z"),
+      },
+    ]);
+    await CategoryModel.create({
+      _id: categoryId,
+      id: categoryId,
+      householdId,
+      name: "Feria",
+      normalizedName: "feria",
+      status: "ACTIVE",
+      createdAt,
+    });
+
+    const expense = await service.register(householdId, {
+      categoryId,
+      payerMembershipId: adminId,
+      actorMembershipId: adminId,
+      date: "2026-07-02",
+      totalAmount: 10000,
+      split: { mode: "AUTO_WEIGHTED" },
+    });
+
+    expect(expense.split.shares).toEqual([
+      { membershipId: adminId, assignedAmount: 5000, weightUsed: 1 },
+      { membershipId: memberId, assignedAmount: 5000, weightUsed: 1 },
+    ]);
+
+    const payment = await service.registerPayment(householdId, expense.id, {
+      membershipId: memberId,
+      amount: 5000,
+      createdByMembershipId: memberId,
+    });
+
+    expect(payment.settlement.shares.find((share) => share.membershipId === memberId)).toMatchObject({
+      paidAmount: 5000,
+      remainingAmount: 0,
+      status: "PAID",
+    });
+  });
 });

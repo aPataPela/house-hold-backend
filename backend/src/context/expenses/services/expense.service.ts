@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { Expense, ExpenseShare } from "../../shared/types/entities";
+import type { Expense, ExpensePayment, ExpenseShare } from "../../shared/types/entities";
 import { badRequest, notFound } from "../../shared/errors/app-error";
 import { decodeExpenseCursor, encodeExpenseCursor } from "../../shared/utils/cursor";
 import { parseDate, toDateString } from "../../shared/utils/date";
+import { activeMembershipCriteria } from "../../shared/utils/membership";
 import { CategoryModel } from "../../households/models/category.model";
 import { HouseholdModel } from "../../households/models/household.model";
 import { MembershipModel } from "../../households/models/membership.model";
@@ -14,6 +15,10 @@ import { ExpenseModel } from "../models/expense.model";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
+
+type ExpensePaymentDoc = ExpensePayment & {
+  kind?: "AUTO_PAYER_SETTLEMENT" | "MANUAL";
+};
 
 type ExpenseWithSettlement = Expense & {
   settlement: {
@@ -164,6 +169,7 @@ export class ExpenseService {
       amount: input.amount,
       createdByMembershipId: actor.id,
       createdAt: this.now(),
+      kind: "MANUAL" as const,
     };
     await ExpensePaymentModel.create({ ...payment, _id: payment.id });
     const nextSettlement = await this.loadSettlement(expense);
@@ -272,14 +278,7 @@ export class ExpenseService {
 
   private async listActiveMemberships(householdId: string, date: Date) {
     return plain<Array<{ id: string }>>(
-      await MembershipModel.find({
-        householdId,
-        status: "ACTIVE",
-        joinedAt: { $lte: date },
-        $or: [{ leftAt: null }, { leftAt: { $gt: date } }, { leftAt: { $exists: false } }],
-      })
-        .sort({ _id: 1 })
-      .lean(),
+      await MembershipModel.find({ householdId, ...activeMembershipCriteria(date) }).sort({ _id: 1 }).lean(),
     );
   }
 
@@ -288,9 +287,7 @@ export class ExpenseService {
       await MembershipModel.findOne({
         _id: membershipId,
         householdId,
-        status: "ACTIVE",
-        joinedAt: { $lte: date },
-        $or: [{ leftAt: null }, { leftAt: { $gt: date } }, { leftAt: { $exists: false } }],
+        ...activeMembershipCriteria(date),
       }).lean(),
     );
   }
@@ -484,7 +481,86 @@ export class ExpenseService {
       amount: payerShare.assignedAmount,
       createdByMembershipId,
       createdAt: this.now(),
+      kind: "AUTO_PAYER_SETTLEMENT",
     });
+  }
+
+  async reconcileExpensesAfterLivingSinceChange(householdId: string, livingSince: Date) {
+    const expenses = plain<Expense[]>(
+      await ExpenseModel.find({
+        householdId,
+        status: "ACTIVE",
+        date: { $gte: livingSince },
+        "split.mode": "AUTO_WEIGHTED",
+      })
+        .sort({ date: 1, _id: 1 })
+        .lean(),
+    );
+    for (const expense of expenses) {
+      const members = await this.listExpenseParticipants(householdId, expense.date);
+      const shares = this.policyEngine.calculateSplit(expense.totalAmount, {
+        members,
+        preferences: await this.listPreferences(householdId, expense.categoryId, expense.date),
+        exclusions: await this.listActiveExclusions(householdId, expense.categoryId, expense.date),
+        date: expense.date,
+      });
+      await ExpenseModel.updateOne(
+        { _id: expense.id },
+        {
+          $set: {
+            split: { mode: "AUTO_WEIGHTED", shares },
+            "audit.updatedAt": this.now(),
+          },
+        },
+      );
+      await this.reconcileAutoSettlement(expense, shares);
+    }
+  }
+
+  private async reconcileAutoSettlement(expense: Expense, shares: ExpenseShare[]): Promise<void> {
+    const payment = await this.findAutoSettlementPayment(expense);
+    const payerShare = shares.find((share) => share.membershipId === expense.payerMembershipId);
+    if (!payerShare || payerShare.assignedAmount <= 0) {
+      if (payment) await ExpensePaymentModel.deleteOne({ _id: payment.id });
+      return;
+    }
+    if (payment) {
+      await ExpensePaymentModel.updateOne(
+        { _id: payment.id },
+        { $set: { amount: payerShare.assignedAmount, kind: "AUTO_PAYER_SETTLEMENT" } },
+      );
+      return;
+    }
+    const paymentId = id("pay");
+    await ExpensePaymentModel.create({
+      _id: paymentId,
+      id: paymentId,
+      householdId: expense.householdId,
+      expenseId: expense.id,
+      membershipId: expense.payerMembershipId,
+      amount: payerShare.assignedAmount,
+      createdByMembershipId: expense.audit.createdByMembershipId,
+      createdAt: this.now(),
+      kind: "AUTO_PAYER_SETTLEMENT",
+    });
+  }
+
+  private async findAutoSettlementPayment(expense: Expense) {
+    const payments = plain<ExpensePaymentDoc[]>(
+      await ExpensePaymentModel.find({ householdId: expense.householdId, expenseId: expense.id })
+        .sort({ createdAt: 1, _id: 1 })
+        .lean(),
+    );
+    const explicit = payments.find((payment) => payment.kind === "AUTO_PAYER_SETTLEMENT");
+    if (explicit) return explicit;
+    if (
+      payments.length === 1 &&
+      payments[0]!.membershipId === expense.payerMembershipId &&
+      payments[0]!.createdByMembershipId === expense.audit.createdByMembershipId
+    ) {
+      return payments[0]!;
+    }
+    return null;
   }
 
   private attachSettlement(

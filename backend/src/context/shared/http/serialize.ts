@@ -45,6 +45,7 @@ export const membershipResponse = (value: Membership) => ({
   role: value.role,
   status: value.status,
   joinedAt: value.joinedAt.toISOString(),
+  livingSince: (value.livingSince ?? value.joinedAt).toISOString(),
 });
 
 export const categoryResponse = (value: Category) => ({
