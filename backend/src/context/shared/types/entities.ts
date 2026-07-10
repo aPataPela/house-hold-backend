@@ -86,6 +86,27 @@ export interface ExpenseShare {
   weightUsed?: number;
 }
 
+export interface ExpensePayment {
+  id: string;
+  householdId: string;
+  expenseId: string;
+  membershipId: string;
+  amount: number;
+  createdByMembershipId: string;
+  createdAt: Date;
+}
+
+export interface ExpenseShareSettlement extends ExpenseShare {
+  paidAmount: number;
+  remainingAmount: number;
+  status: "PENDING" | "PARTIAL" | "PAID";
+}
+
+export interface ExpenseSettlement {
+  payments: ExpensePayment[];
+  shares: ExpenseShareSettlement[];
+}
+
 export interface Expense {
   id: string;
   householdId: string;
@@ -103,6 +124,7 @@ export interface Expense {
   }>;
   split: { mode: "AUTO_WEIGHTED" | "MANUAL"; shares: ExpenseShare[] };
   audit: { createdByMembershipId: string; createdAt: Date; updatedAt: Date };
+  settlement?: ExpenseSettlement;
 }
 
 export interface CommonArea {

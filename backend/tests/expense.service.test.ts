@@ -88,6 +88,16 @@ describe("ExpenseService", () => {
     expect(expense.split.shares).toEqual([
       { membershipId: payerMembershipId, assignedAmount: 12000, weightUsed: 1 },
     ]);
+    expect(expense.settlement?.shares).toEqual([
+      {
+        membershipId: payerMembershipId,
+        assignedAmount: 12000,
+        weightUsed: 1,
+        paidAmount: 12000,
+        remainingAmount: 0,
+        status: "PAID",
+      },
+    ]);
   });
 
   it("rejects expenses dated in the future", async () => {
@@ -221,6 +231,113 @@ describe("ExpenseService", () => {
     expect(afterChange.split.shares).toEqual([
       { membershipId: adminId, assignedAmount: 8000, weightUsed: 1 },
       { membershipId: memberId, assignedAmount: 4000, weightUsed: 0.5 },
+    ]);
+  });
+
+  it("tracks partial and full payments against a share", async () => {
+    const now = () => new Date("2026-03-15T12:00:00.000Z");
+    const service = new ExpenseService(now);
+    const householdId = "hh_payments";
+    const categoryId = "cat_payments";
+    const payerId = "m_payer";
+    const memberId = "m_member";
+    const createdAt = now();
+
+    await HouseholdModel.create({
+      _id: householdId,
+      id: householdId,
+      name: "Casa Pagos",
+      currency: "CLP",
+      approvalMode: "ADMIN_ONLY",
+      createdAt,
+    });
+    await MembershipModel.create([
+      {
+        _id: payerId,
+        id: payerId,
+        householdId,
+        userId: "usr_payer",
+        role: "ADMIN",
+        status: "ACTIVE",
+        joinedAt: new Date("2026-03-01T00:00:00.000Z"),
+      },
+      {
+        _id: memberId,
+        id: memberId,
+        householdId,
+        userId: "usr_member",
+        role: "MEMBER",
+        status: "ACTIVE",
+        joinedAt: new Date("2026-03-01T00:00:00.000Z"),
+      },
+    ]);
+    await CategoryModel.create({
+      _id: categoryId,
+      id: categoryId,
+      householdId,
+      name: "Feria",
+      normalizedName: "feria",
+      status: "ACTIVE",
+      createdAt,
+    });
+
+    const expense = await service.register(householdId, {
+      categoryId,
+      payerMembershipId: payerId,
+      actorMembershipId: payerId,
+      date: "2026-03-10",
+      totalAmount: 10000,
+      split: { mode: "MANUAL", shares: [{ membershipId: memberId, assignedAmount: 10000 }] },
+    });
+    expect(expense.settlement?.shares[0]).toMatchObject({
+      membershipId: memberId,
+      assignedAmount: 10000,
+      paidAmount: 0,
+      remainingAmount: 10000,
+      status: "PENDING",
+    });
+
+    const partial = await service.registerPayment(householdId, expense.id, {
+      membershipId: memberId,
+      amount: 3500,
+      createdByMembershipId: memberId,
+    });
+    expect(partial.settlement.shares[0]).toMatchObject({
+      membershipId: memberId,
+      assignedAmount: 10000,
+      paidAmount: 3500,
+      remainingAmount: 6500,
+      status: "PARTIAL",
+    });
+
+    const final = await service.registerPayment(householdId, expense.id, {
+      membershipId: memberId,
+      amount: 6500,
+      createdByMembershipId: memberId,
+    });
+    expect(final.settlement.shares[0]).toMatchObject({
+      membershipId: memberId,
+      assignedAmount: 10000,
+      paidAmount: 10000,
+      remainingAmount: 0,
+      status: "PAID",
+    });
+
+    await expect(
+      service.registerPayment(householdId, expense.id, {
+        membershipId: memberId,
+        amount: 1,
+        createdByMembershipId: memberId,
+      }),
+    ).rejects.toMatchObject({ code: "OVERPAYMENT" });
+
+    const balance = await service.balance(householdId, {
+      from: "2026-03-01",
+      to: "2026-04-01",
+    });
+    expect(balance.members).toEqual([
+      { membershipId: memberId, paid: 10000, assigned: 10000, netBalance: 0 },
+      { membershipId: payerId, paid: 10000, assigned: 10000, netBalance: 0 },
     ]);
   });
 });

@@ -14,6 +14,9 @@ const friendlyErrors: Record<string, string> = {
   INVALID_PARTICIPANTS: "Al menos una persona debe participar.",
   INVALID_PARTICIPATION_RULE: "La regla de participación es inválida.",
   INVALID_PERIOD: "Revisa las fechas: la fecha final debe ser posterior.",
+  INVALID_PAYMENT_MEMBER: "No puedes registrar ese pago para esa persona.",
+  OVERPAYMENT: "El monto supera la deuda pendiente.",
+  INVALID_AMOUNT: "El monto debe ser mayor a cero.",
   VALIDATION_ERROR: "Revisa los datos ingresados e inténtalo otra vez.",
 };
 

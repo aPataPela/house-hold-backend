@@ -18,3 +18,8 @@ services:
     class: ../../controllers/expenses/find/GetBalanceController
     main: GetBalanceController
     arguments: ["@Service.Expense"]
+
+  Controller.Expense.Payment:
+    class: ../../controllers/expenses/create/CreateExpensePaymentController
+    main: CreateExpensePaymentController
+    arguments: ["@Service.Expense"]

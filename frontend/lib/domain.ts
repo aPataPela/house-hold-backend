@@ -58,11 +58,59 @@ export type ChoreWeek = {
 
 export type Expense = {
   expenseId: string;
+  householdId: string;
   categoryId: string;
   payerMembershipId: string;
   date: string;
   totalAmount: number;
+  status: "ACTIVE" | "CANCELLED";
+  items: Array<{
+    description: string;
+    quantity?: number;
+    unit?: string;
+    note?: string;
+  }>;
+  split: {
+    mode: "AUTO_WEIGHTED" | "MANUAL";
+    shares: Array<{
+      membershipId: string;
+      assignedAmount: number;
+      weightUsed?: number;
+      paidAmount: number;
+      remainingAmount: number;
+      status: "PENDING" | "PARTIAL" | "PAID";
+    }>;
+  };
+  settlement?: {
+    payments: Array<{
+      paymentId: string;
+      householdId: string;
+      expenseId: string;
+      membershipId: string;
+      amount: number;
+      createdByMembershipId: string;
+      createdAt: string;
+    }>;
+    shares: Array<{
+      membershipId: string;
+      assignedAmount: number;
+      weightUsed?: number;
+      paidAmount: number;
+      remainingAmount: number;
+      status: "PENDING" | "PARTIAL" | "PAID";
+    }>;
+  };
+  audit: {
+    createdByMembershipId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
   note?: string;
+};
+
+export type ExpensePaymentDraft = {
+  membershipId: string;
+  amount: number;
 };
 
 export type ExpenseDraft = {

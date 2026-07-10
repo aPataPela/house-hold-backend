@@ -16,9 +16,11 @@ type HomeViewProps = {
   expenses: Expense[];
   categoryName: (id: string) => string;
   memberName: (id: string) => string;
+  currentMembershipId?: string;
   onOpenExpense: () => void;
   onGoToExpenses: () => void;
   onGoToRules: () => void;
+  onPayExpense?: (expense: Expense) => void;
 };
 
 export function HomeView({
@@ -26,9 +28,11 @@ export function HomeView({
   expenses,
   categoryName,
   memberName,
+  currentMembershipId,
   onOpenExpense,
   onGoToExpenses,
   onGoToRules,
+  onPayExpense,
 }: HomeViewProps) {
   const total = expenses.reduce((sum, expense) => sum + expense.totalAmount, 0);
 
@@ -83,6 +87,8 @@ export function HomeView({
         expenses={expenses.slice(0, 3)}
         categoryName={categoryName}
         memberName={memberName}
+        currentMembershipId={currentMembershipId}
+        onPayExpense={onPayExpense}
         emptyText="Registra el primer gasto de este mes."
       />
     </section>

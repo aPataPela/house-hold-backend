@@ -9,10 +9,33 @@ import { MembershipModel } from "../../households/models/membership.model";
 import { CategoryExclusionModel } from "../../participation/models/category-exclusion.model";
 import { PreferenceModel } from "../../participation/models/preference.model";
 import { ParticipationPolicyEngine } from "../../participation/services/participation-policy-engine";
+import { ExpensePaymentModel } from "../models/expense-payment.model";
 import { ExpenseModel } from "../models/expense.model";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
+
+type ExpenseWithSettlement = Expense & {
+  settlement: {
+    payments: Array<{
+      id: string;
+      householdId: string;
+      expenseId: string;
+      membershipId: string;
+      amount: number;
+      createdByMembershipId: string;
+      createdAt: Date;
+    }>;
+    shares: Array<{
+      membershipId: string;
+      assignedAmount: number;
+      weightUsed?: number;
+      paidAmount: number;
+      remainingAmount: number;
+      status: "PENDING" | "PARTIAL" | "PAID";
+    }>;
+  };
+};
 
 export class ExpenseService {
   constructor(
@@ -103,7 +126,48 @@ export class ExpenseService {
       ...(input.note ? { note: input.note.trim() } : {}),
     };
     await ExpenseModel.create({ ...expense, _id: expense.id });
-    return expense;
+    await this.settlePayerShare(expense, input.actorMembershipId);
+    const nextSettlement = await this.loadSettlement(expense);
+    return this.attachSettlement(expense, nextSettlement.payments, nextSettlement.shares);
+  }
+
+  async registerPayment(
+    householdId: string,
+    expenseId: string,
+    input: { membershipId: string; amount: number; createdByMembershipId: string },
+  ) {
+    if (!(await HouseholdModel.findById(householdId).lean())) throw notFound("household");
+    const expense = await this.findActiveExpense(householdId, expenseId);
+    if (!expense) throw notFound("expense");
+    const actor = await this.findActiveMembership(householdId, input.createdByMembershipId);
+    if (!actor) throw badRequest("INACTIVE_ACTOR", "an active membership is required");
+    if (actor.id !== input.membershipId && actor.role !== "ADMIN") {
+      throw badRequest("INVALID_PAYMENT_MEMBER", "only an ADMIN can pay for another member");
+    }
+    if (!expense.split.shares.some((share) => share.membershipId === input.membershipId)) {
+      throw badRequest("INVALID_PAYMENT_MEMBER", "membership is not part of the expense split");
+    }
+    const settlement = await this.loadSettlement(expense);
+    const targetShare = settlement.shares.find((share) => share.membershipId === input.membershipId);
+    if (!targetShare) throw notFound("expense share");
+    if (!Number.isInteger(input.amount) || input.amount <= 0) {
+      throw badRequest("INVALID_AMOUNT", "amount must be a positive CLP integer");
+    }
+    if (input.amount > targetShare.remainingAmount) {
+      throw badRequest("OVERPAYMENT", "amount exceeds the remaining share balance");
+    }
+    const payment = {
+      id: id("pay"),
+      householdId,
+      expenseId: expense.id,
+      membershipId: input.membershipId,
+      amount: input.amount,
+      createdByMembershipId: actor.id,
+      createdAt: this.now(),
+    };
+    await ExpensePaymentModel.create({ ...payment, _id: payment.id });
+    const nextSettlement = await this.loadSettlement(expense);
+    return this.attachSettlement(expense, nextSettlement.payments, nextSettlement.shares);
   }
 
   async list(
@@ -133,8 +197,9 @@ export class ExpenseService {
     });
     const hasMore = expenses.length > limit;
     const page = expenses.slice(0, limit);
+    const withSettlement = await this.attachSettlements(page);
     return {
-      expenses: page,
+      expenses: withSettlement,
       page: {
         limit,
         ...(hasMore && page.length ? { nextCursor: encodeExpenseCursor(page[page.length - 1]!) } : {}),
@@ -148,11 +213,33 @@ export class ExpenseService {
     const to = parseDate(input.to, "to");
     if (from >= to) throw badRequest("INVALID_PERIOD", "from must be before to");
     const expenses = await this.listExpenses({ householdId, from, to, status: "ACTIVE" });
+    const payments = await this.listPayments({
+      householdId,
+      from,
+      to,
+    });
+    const paymentExpenseIds = [...new Set(payments.map((payment) => payment.expenseId))];
+    const paymentExpenses =
+      paymentExpenseIds.length > 0
+        ? plain<Expense[]>(
+            await ExpenseModel.find({
+              householdId,
+              _id: { $in: paymentExpenseIds },
+              status: "ACTIVE",
+            }).lean(),
+          )
+        : [];
+    const paymentExpenseById = new Map(paymentExpenses.map((expense) => [expense.id, expense]));
     const periodMembers = await this.listActiveMemberships(householdId, new Date(to.getTime() - 1));
     const ids = new Set(periodMembers.map((member) => member.id));
     for (const expense of expenses) {
       ids.add(expense.payerMembershipId);
       expense.split.shares.forEach((share) => ids.add(share.membershipId));
+    }
+    for (const payment of payments) {
+      ids.add(payment.membershipId);
+      const expense = paymentExpenseById.get(payment.expenseId) ?? expenses.find((item) => item.id === payment.expenseId);
+      if (expense) ids.add(expense.payerMembershipId);
     }
     const rows = new Map(
       [...ids].map((membershipId) => [membershipId, { membershipId, paid: 0, assigned: 0, netBalance: 0 }]),
@@ -162,6 +249,12 @@ export class ExpenseService {
       for (const share of expense.split.shares) {
         rows.get(share.membershipId)!.assigned += share.assignedAmount;
       }
+    }
+    for (const payment of payments) {
+      const expense = paymentExpenseById.get(payment.expenseId) ?? expenses.find((item) => item.id === payment.expenseId);
+      if (!expense) continue;
+      rows.get(payment.membershipId)!.paid += payment.amount;
+      rows.get(expense.payerMembershipId)!.assigned += payment.amount;
     }
     for (const row of rows.values()) row.netBalance = row.paid - row.assigned;
     return {
@@ -191,7 +284,7 @@ export class ExpenseService {
   }
 
   private async findActiveMembership(householdId: string, membershipId: string, date = this.now()) {
-    return plain<{ id: string } | null>(
+    return plain<{ id: string; role: "ADMIN" | "MEMBER" } | null>(
       await MembershipModel.findOne({
         _id: membershipId,
         householdId,
@@ -265,5 +358,158 @@ export class ExpenseService {
         .limit(query.limit ?? 0)
         .lean(),
     );
+  }
+
+  private async listPayments(query: { householdId: string; from: Date; to: Date }) {
+    return plain<
+      Array<{
+        id: string;
+        householdId: string;
+        expenseId: string;
+        membershipId: string;
+        amount: number;
+        createdByMembershipId: string;
+        createdAt: Date;
+      }>
+    >(
+      await ExpensePaymentModel.find({
+        householdId: query.householdId,
+        createdAt: { $gte: query.from, $lt: query.to },
+      })
+        .sort({ createdAt: 1, _id: 1 })
+        .lean(),
+    );
+  }
+
+  private async findActiveExpense(householdId: string, expenseId: string) {
+    return plain<Expense | null>(
+      await ExpenseModel.findOne({ householdId, _id: expenseId, status: "ACTIVE" }).lean(),
+    );
+  }
+
+  private async attachSettlements(expenses: Expense[]) {
+    if (expenses.length === 0) return expenses as ExpenseWithSettlement[];
+    const settled = await this.loadSettlements(expenses);
+    return expenses.map((expense) =>
+      this.attachSettlement(expense, settled.get(expense.id)?.payments ?? [], settled.get(expense.id)?.shares),
+    );
+  }
+
+  private async loadSettlements(expenses: Expense[]) {
+    const paymentDocs = await ExpensePaymentModel.find({
+      householdId: { $in: [...new Set(expenses.map((expense) => expense.householdId))] },
+      expenseId: { $in: expenses.map((expense) => expense.id) },
+    })
+      .sort({ createdAt: 1, _id: 1 })
+      .lean();
+    const paymentsByExpense = new Map<string, Array<{
+      id: string;
+      householdId: string;
+      expenseId: string;
+      membershipId: string;
+      amount: number;
+      createdByMembershipId: string;
+      createdAt: Date;
+    }>>();
+    for (const payment of paymentDocs) {
+      const list = paymentsByExpense.get(payment.expenseId) ?? [];
+      list.push(payment);
+      paymentsByExpense.set(payment.expenseId, list);
+    }
+    const settlements = new Map<
+      string,
+      {
+        payments: Array<{
+          id: string;
+          householdId: string;
+          expenseId: string;
+          membershipId: string;
+          amount: number;
+          createdByMembershipId: string;
+          createdAt: Date;
+        }>;
+        shares: Array<{
+          membershipId: string;
+          assignedAmount: number;
+          weightUsed?: number;
+          paidAmount: number;
+          remainingAmount: number;
+          status: "PENDING" | "PARTIAL" | "PAID";
+        }>;
+      }
+    >();
+    for (const expense of expenses) {
+      const payments = paymentsByExpense.get(expense.id) ?? [];
+      const paidByMember = new Map<string, number>();
+      for (const payment of payments) {
+        paidByMember.set(payment.membershipId, (paidByMember.get(payment.membershipId) ?? 0) + payment.amount);
+      }
+      const shares = expense.split.shares.map((share) => {
+        const paidAmount = paidByMember.get(share.membershipId) ?? 0;
+        const remainingAmount = Math.max(share.assignedAmount - paidAmount, 0);
+        const status: "PENDING" | "PARTIAL" | "PAID" =
+          remainingAmount === 0
+            ? "PAID"
+            : paidAmount === 0
+              ? "PENDING"
+              : "PARTIAL";
+        return {
+          ...share,
+          paidAmount,
+          remainingAmount,
+          status,
+        };
+      });
+      settlements.set(expense.id, { payments, shares });
+    }
+    return settlements;
+  }
+
+  private async loadSettlement(expense: Expense) {
+    return (await this.loadSettlements([expense])).get(expense.id) ?? { payments: [], shares: [] };
+  }
+
+  private async settlePayerShare(expense: Expense, createdByMembershipId: string) {
+    const payerShare = expense.split.shares.find(
+      (share) => share.membershipId === expense.payerMembershipId,
+    );
+    if (!payerShare || payerShare.assignedAmount <= 0) return;
+    const paymentId = id("pay");
+    await ExpensePaymentModel.create({
+      _id: paymentId,
+      id: paymentId,
+      householdId: expense.householdId,
+      expenseId: expense.id,
+      membershipId: expense.payerMembershipId,
+      amount: payerShare.assignedAmount,
+      createdByMembershipId,
+      createdAt: this.now(),
+    });
+  }
+
+  private attachSettlement(
+    expense: Expense,
+    payments: Array<{
+      id: string;
+      householdId: string;
+      expenseId: string;
+      membershipId: string;
+      amount: number;
+      createdByMembershipId: string;
+      createdAt: Date;
+    }>,
+    shares?: Array<{
+      membershipId: string;
+      assignedAmount: number;
+      weightUsed?: number;
+      paidAmount: number;
+      remainingAmount: number;
+      status: "PENDING" | "PARTIAL" | "PAID";
+    }>,
+  ) {
+    const settlement = shares
+      ? { payments, shares }
+      : { payments, shares: expense.split.shares.map((share) => ({ ...share, paidAmount: 0, remainingAmount: share.assignedAmount, status: "PENDING" as const })) };
+    return { ...expense, settlement } as ExpenseWithSettlement;
   }
 }

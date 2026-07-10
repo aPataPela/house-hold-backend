@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, ReceiptText } from "lucide-react";
+import { CheckCircle2, Plus, ReceiptText } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Category, Expense } from "@/lib/domain";
 import { formatShortDate } from "@/lib/date";
@@ -10,6 +10,8 @@ type ExpenseListProps = {
   expenses: Expense[];
   categoryName: (id: string) => string;
   memberName: (id: string) => string;
+  currentMembershipId?: string;
+  onPayExpense?: (expense: Expense) => void;
   emptyText?: string;
 };
 
@@ -17,6 +19,8 @@ export function ExpenseList({
   expenses,
   categoryName,
   memberName,
+  currentMembershipId,
+  onPayExpense,
   emptyText = "No hay gastos en este período.",
 }: ExpenseListProps) {
   if (expenses.length === 0) {
@@ -25,23 +29,75 @@ export function ExpenseList({
 
   return (
     <div className="expense-list">
-      {expenses.map((expense) => (
-        <article className="expense-row" key={expense.expenseId}>
-          <span className="row-icon" aria-hidden="true">
-            <ReceiptText size={19} />
-          </span>
-          <div className="expense-main">
-            <h3>{categoryName(expense.categoryId)}</h3>
-            <p>
-              {memberName(expense.payerMembershipId)} ·{" "}
-              {formatShortDate(expense.date)}
-            </p>
-            {expense.note && <p className="expense-note">{expense.note}</p>}
-          </div>
-          <strong>{formatCurrency(expense.totalAmount)}</strong>
-        </article>
-      ))}
+      {expenses.map((expense) => {
+        const share = currentMembershipId
+          ? expense.settlement?.shares.find(
+              (item) => item.membershipId === currentMembershipId,
+            )
+          : undefined;
+        const clickable = Boolean(onPayExpense && share && share.remainingAmount > 0);
+
+        return (
+          <button
+            key={expense.expenseId}
+            className={`expense-row ${clickable ? "clickable" : ""}`}
+            type="button"
+            onClick={() => {
+              if (!clickable || !onPayExpense) return;
+              onPayExpense(expense);
+            }}
+            aria-disabled={!clickable}
+          >
+            <span className="row-icon" aria-hidden="true">
+              <ReceiptText size={19} />
+            </span>
+            <div className="expense-main">
+              <h3>{categoryName(expense.categoryId)}</h3>
+              <p>
+                {memberName(expense.payerMembershipId)} ·{" "}
+                {formatShortDate(expense.date)}
+              </p>
+              {expense.note && <p className="expense-note">{expense.note}</p>}
+              {currentMembershipId && expense.settlement && (
+                <ExpenseSettlementLine
+                  expense={expense}
+                  currentMembershipId={currentMembershipId}
+                />
+              )}
+            </div>
+            <div className="expense-amount">
+              <strong>{formatCurrency(expense.totalAmount)}</strong>
+            </div>
+          </button>
+        );
+      })}
     </div>
+  );
+}
+
+function ExpenseSettlementLine({
+  expense,
+  currentMembershipId,
+}: {
+  expense: Expense;
+  currentMembershipId: string;
+}) {
+  const share = expense.settlement?.shares.find(
+    (item) => item.membershipId === currentMembershipId,
+  );
+  if (!share) return null;
+  const label =
+    share.remainingAmount === 0
+      ? "Pagado"
+      : share.paidAmount > 0
+        ? `Parcial · queda ${formatCurrency(share.remainingAmount)}`
+        : `Pendiente · ${formatCurrency(share.remainingAmount)}`;
+
+  return (
+    <p className={`expense-settlement ${share.status.toLowerCase()}`}>
+      <CheckCircle2 size={15} aria-hidden="true" />
+      {label}
+    </p>
   );
 }
 
@@ -53,6 +109,8 @@ type ExpensesViewProps = {
   onOpenExpense: () => void;
   categoryName: (id: string) => string;
   memberName: (id: string) => string;
+  currentMembershipId?: string;
+  onPayExpense?: (expense: Expense) => void;
 };
 
 export function ExpensesView({
@@ -63,6 +121,8 @@ export function ExpensesView({
   onOpenExpense,
   categoryName,
   memberName,
+  currentMembershipId,
+  onPayExpense,
 }: ExpensesViewProps) {
   const [categoryId, setCategoryId] = useState("all");
   const filteredExpenses = useMemo(
@@ -128,6 +188,8 @@ export function ExpensesView({
         expenses={filteredExpenses}
         categoryName={categoryName}
         memberName={memberName}
+        currentMembershipId={currentMembershipId}
+        onPayExpense={onPayExpense}
       />
     </section>
   );

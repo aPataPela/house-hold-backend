@@ -540,6 +540,23 @@ h3 {
   border-bottom: 1px solid var(--line);
 }
 
+.expense-row {
+  width: 100%;
+  appearance: none;
+  cursor: default;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  border-radius: 0;
+  border-bottom-width: 1px;
+  background: transparent;
+  text-align: left;
+}
+
+.expense-row.clickable {
+  cursor: pointer;
+}
+
 .expense-row:last-child,
 .chore-row:last-child {
   border-bottom: 0;
@@ -583,10 +600,34 @@ h3 {
   color: #4f5a53;
 }
 
-.expense-row > strong {
+.expense-amount {
   max-width: 118px;
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.expense-amount strong {
   font-size: 0.88rem;
   text-align: right;
+}
+
+.expense-settlement {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.expense-settlement.pending,
+.expense-settlement.partial {
+  color: var(--primary);
+}
+
+.expense-settlement.paid {
+  color: #2f6b47;
 }
 
 .empty-state {
@@ -621,6 +662,26 @@ h3 {
 
 .dialog-header {
   margin-bottom: 22px;
+}
+
+.payment-summary {
+  display: grid;
+  gap: 6px;
+  margin: -8px 0 16px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted);
+}
+
+.payment-summary strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
+.payment-summary span {
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .dialog-empty {
@@ -674,6 +735,23 @@ h3 {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+.payment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.payment-actions.settled {
+  justify-content: flex-end;
+}
+
+.payment-actions .text-action,
+.payment-actions .primary-action {
+  min-width: 0;
 }
 
 .tutorial-dialog {

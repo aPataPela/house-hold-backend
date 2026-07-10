@@ -20,6 +20,7 @@ import {
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ExpenseDialog } from "@/features/expenses/expense-dialog";
 import { ExpensesView } from "@/features/expenses/expenses-view";
+import { PaymentDialog } from "@/features/expenses/payment-dialog";
 import { HomeView } from "@/features/home/home-view";
 import { RulesView } from "@/features/rules/rules-view";
 import { TutorialDialog } from "@/features/tutorial/tutorial-dialog";
@@ -46,6 +47,7 @@ import type {
   ExclusionDraft,
   Expense,
   ExpenseDraft,
+  ExpensePaymentDraft,
   Member,
   ParticipationRules,
   PreferenceDraft,
@@ -77,6 +79,8 @@ export default function HomePage() {
   const [rules, setRules] = useState<ParticipationRules>(emptyRules);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthValue);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentExpense, setPaymentExpense] = useState<Expense | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialRunId, setTutorialRunId] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
@@ -411,6 +415,35 @@ export default function HomePage() {
     });
   };
 
+  const openPayment = (expense: Expense) => {
+    setPaymentExpense(expense);
+    setPaymentDialogOpen(true);
+  };
+
+  const closePayment = () => {
+    setPaymentDialogOpen(false);
+    setPaymentExpense(null);
+  };
+
+  const createPayment = async (draft: ExpensePaymentDraft) => {
+    if (!hasHousehold || !session || !paymentExpense) return false;
+    return run(async () => {
+      await apiRequest(
+        `/api/v1/households/${session.householdId}/expenses/${paymentExpense.expenseId}/payments`,
+        {
+          method: "POST",
+          accessToken: session.accessToken,
+          body: JSON.stringify({
+            ...draft,
+            createdByMembershipId: session.currentMembershipId,
+          }),
+        },
+      );
+      await loadExpenseData(session, selectedMonth);
+      setMessage("Abono guardado.");
+    });
+  };
+
   const setPreference = async (draft: PreferenceDraft) => {
     if (!hasHousehold || !session) return false;
     return run(async () => {
@@ -673,9 +706,11 @@ export default function HomePage() {
                     expenses={expenses}
                     categoryName={getCategoryName}
                     memberName={getMemberName}
+                    currentMembershipId={session.currentMembershipId}
                     onOpenExpense={() => setExpenseDialogOpen(true)}
                     onGoToExpenses={() => setTab("expenses")}
                     onGoToRules={() => setTab("rules")}
+                    onPayExpense={openPayment}
                   />
                 )}
                 {tab === "expenses" && (
@@ -687,6 +722,8 @@ export default function HomePage() {
                     onOpenExpense={() => setExpenseDialogOpen(true)}
                     categoryName={getCategoryName}
                     memberName={getMemberName}
+                    currentMembershipId={session.currentMembershipId}
+                    onPayExpense={openPayment}
                   />
                 )}
                 {tab === "rules" && (
@@ -758,6 +795,15 @@ export default function HomePage() {
               onClose={() => setExpenseDialogOpen(false)}
               onNeedCategory={() => setTab("rules")}
               onSubmit={createExpense}
+            />
+            <PaymentDialog
+              open={paymentDialogOpen}
+              expense={paymentExpense}
+              currentMembershipId={session.currentMembershipId}
+              categoryName={getCategoryName}
+              memberName={getMemberName}
+              onClose={closePayment}
+              onSubmit={createPayment}
             />
             <TutorialDialog
               key={tutorialRunId}

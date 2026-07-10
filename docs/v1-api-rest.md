@@ -48,11 +48,14 @@ Errores:
 - `POST /households/{householdId}/expenses`
   - AUTO: `{ "categoryId": "cat_1", "payerMembershipId": "m_1", "actorMembershipId": "m_1", "date": "2026-02-10", "totalAmount": 47000, "split": { "mode": "AUTO_WEIGHTED" } }`
   - MANUAL válido: `{ "categoryId": "cat_1", "payerMembershipId": "m_1", "actorMembershipId": "m_1", "date": "2026-02-10", "totalAmount": 47000, "split": { "mode": "MANUAL", "shares": [{ "membershipId": "m_1", "assignedAmount": 23500 }, { "membershipId": "m_2", "assignedAmount": 23500 }] } }`
-  - Los shares deben usar memberships activas y sumar exactamente `totalAmount`. Responde `201`.
+  - Los shares deben usar memberships activas y sumar exactamente `totalAmount`. Si el pagador participa en el reparto, su cuota queda auto-saldada por backend al registrar el gasto. Responde `201`.
 - `GET /households/{householdId}/expenses?from=2026-02-01&to=2026-03-01&limit=50&cursor=...`
   - Filtros opcionales: `categoryId`, `status`. `nextCursor` es opaco. Responde `200`.
+- `POST /households/{householdId}/expenses/{expenseId}/payments`
+  - Body: `{ "membershipId": "m_2", "amount": 12000, "createdByMembershipId": "m_2" }`
+  - Registra un abono parcial o total sobre el share de un miembro. `amount` no puede superar el saldo pendiente del share. Responde `201`.
 - `GET /households/{householdId}/balance?from=2026-02-01&to=2026-03-01`
-  - `netBalance = paid - assigned`; la suma de saldos es cero. Responde `200`.
+  - `netBalance = paid - assigned`; los pagos de deuda cuentan como movimientos del período y la suma de saldos es cero. Responde `200`.
 
 ## Tareas domésticas
 

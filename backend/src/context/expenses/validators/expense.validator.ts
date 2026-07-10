@@ -15,6 +15,13 @@ const split = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("AUTO_WEIGHTED") }).strict(),
   z.object({ mode: z.literal("MANUAL"), shares: z.array(share).min(1) }).strict(),
 ]);
+const payment = z
+  .object({
+    membershipId: text,
+    amount: z.number().int().positive(),
+    createdByMembershipId: text,
+  })
+  .strict();
 
 export const registerExpenseSchema = z
   .object({
@@ -41,3 +48,5 @@ export const listExpensesQuerySchema = z
   .strict();
 
 export const balanceQuerySchema = z.object({ from: date, to: date }).strict();
+
+export const registerExpensePaymentSchema = payment;

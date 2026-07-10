@@ -332,6 +332,12 @@ describe("V1 flow", () => {
       ),
     ).toBe(47000);
     expect(first.body.split.shares).toHaveLength(2);
+    expect(first.body.settlement.shares.find((share: { membershipId: string }) => share.membershipId === setup.adminId))
+      .toMatchObject({
+        paidAmount: 23500,
+        remainingAmount: 0,
+        status: "PAID",
+      });
 
     const excluded = await request(app)
       .post(`/api/v1/households/${setup.householdId}/expenses`)
@@ -363,6 +369,73 @@ describe("V1 flow", () => {
     expect(
       balance.body.members.reduce((sum: number, row: { netBalance: number }) => sum + row.netBalance, 0),
     ).toBe(0);
+  });
+
+  it("registers partial and full payments for an expense share", async () => {
+    const setup = await bootstrap();
+    const expense = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/expenses`)
+      .send({
+        categoryId: setup.categoryId,
+        payerMembershipId: setup.adminId,
+        actorMembershipId: setup.adminId,
+        date: "2025-12-15",
+        totalAmount: 9000,
+        split: {
+          mode: "MANUAL",
+          shares: [{ membershipId: setup.memberId, assignedAmount: 9000 }],
+        },
+      })
+      .expect(201);
+    expect(expense.body.settlement.shares[0]).toMatchObject({
+      membershipId: setup.memberId,
+      assignedAmount: 9000,
+      paidAmount: 0,
+      remainingAmount: 9000,
+      status: "PENDING",
+    });
+
+    await request(app)
+      .post(`/api/v1/households/${setup.householdId}/expenses/${expense.body.expenseId}/payments`)
+      .send({
+        membershipId: setup.memberId,
+        amount: 2500,
+        createdByMembershipId: setup.memberId,
+      })
+      .expect(201)
+      .expect((res) => {
+        expect(res.body.settlement.shares[0]).toMatchObject({
+          paidAmount: 2500,
+          remainingAmount: 6500,
+          status: "PARTIAL",
+        });
+      });
+
+    const reloaded = await request(app)
+      .get(`/api/v1/households/${setup.householdId}/expenses?from=2025-12-01&to=2026-01-01`)
+      .expect(200);
+    expect(reloaded.body.expenses[0].settlement.shares[0]).toMatchObject({
+      paidAmount: 2500,
+      remainingAmount: 6500,
+      status: "PARTIAL",
+    });
+
+    await request(app)
+      .post(`/api/v1/households/${setup.householdId}/expenses/${expense.body.expenseId}/payments`)
+      .send({
+        membershipId: setup.memberId,
+        amount: 6500,
+        createdByMembershipId: setup.memberId,
+      })
+      .expect(201);
+
+    const balance = await request(app)
+      .get(`/api/v1/households/${setup.householdId}/balance?from=2025-12-01&to=2026-01-01`)
+      .expect(200);
+    const memberRow = balance.body.members.find(
+      (row: { membershipId: string }) => row.membershipId === setup.memberId,
+    );
+    expect(memberRow.netBalance).toBe(0);
   });
 
   it("authorizes and validates category exclusions", async () => {

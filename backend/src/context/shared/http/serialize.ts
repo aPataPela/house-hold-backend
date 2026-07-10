@@ -6,6 +6,7 @@ import type {
   Category,
   CommonArea,
   Expense,
+  ExpensePayment,
   Household,
   Membership,
   Preference,
@@ -94,7 +95,25 @@ export const expenseResponse = (value: Expense) => ({
     createdAt: value.audit.createdAt.toISOString(),
     updatedAt: value.audit.updatedAt.toISOString(),
   },
+  ...(value.settlement
+    ? {
+        settlement: {
+          payments: value.settlement.payments.map(expensePaymentResponse),
+          shares: value.settlement.shares,
+        },
+      }
+    : {}),
   ...(value.note ? { note: value.note } : {}),
+});
+
+export const expensePaymentResponse = (value: ExpensePayment) => ({
+  paymentId: value.id,
+  householdId: value.householdId,
+  expenseId: value.expenseId,
+  membershipId: value.membershipId,
+  amount: value.amount,
+  createdByMembershipId: value.createdByMembershipId,
+  createdAt: value.createdAt.toISOString(),
 });
 
 export const commonAreaResponse = (value: CommonArea) => ({
