@@ -1,10 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { CategoryExclusion, Preference, Role } from "../../shared/types/entities";
+import type { Preference, Role } from "../../shared/types/entities";
 import { badRequest, forbidden, notFound } from "../../shared/errors/app-error";
 import { parseDate } from "../../shared/utils/date";
 import { CategoryModel } from "../../households/models/category.model";
 import { MembershipModel } from "../../households/models/membership.model";
-import { CategoryExclusionModel } from "../models/category-exclusion.model";
 import { PreferenceModel } from "../models/preference.model";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
@@ -97,104 +96,17 @@ export class ParticipationService {
     if (!viewer) throw forbidden("an active household membership is required");
 
     const on = parseDate(input.on, "on");
-    const [preferences, exclusions] = await Promise.all([
-      PreferenceModel.find({
-        householdId,
-        validFrom: { $lte: on },
-        $or: [
-          { validTo: null },
-          { validTo: { $gt: on } },
-          { validTo: { $exists: false } },
-        ],
-      })
-        .sort({ categoryId: 1, membershipId: 1, validFrom: -1 })
-        .lean(),
-      CategoryExclusionModel.find({
-        householdId,
-        status: "ACTIVE",
-        periodEnd: { $gt: on },
-      })
-        .sort({ periodStart: 1 })
-        .lean(),
-    ]);
+    const preferences = await PreferenceModel.find({
+      householdId,
+      validFrom: { $lte: on },
+      $or: [{ validTo: null }, { validTo: { $gt: on } }, { validTo: { $exists: false } }],
+    })
+      .sort({ categoryId: 1, membershipId: 1, validFrom: -1 })
+      .lean();
 
     return {
       preferences: plain<Preference[]>(preferences),
-      exclusions: plain<CategoryExclusion[]>(exclusions),
     };
-  }
-
-  async createExclusion(
-    householdId: string,
-    input: {
-      membershipId: string;
-      categoryId: string;
-      periodStart: string;
-      periodEnd: string;
-      reason?: string | undefined;
-      createdByMembershipId: string;
-    },
-  ) {
-    const membership = await this.findActiveMembership(input.membershipId, householdId);
-    if (!membership) {
-      throw notFound("membership");
-    }
-    const category = await CategoryModel.findById(input.categoryId).lean();
-    if (!category || category.householdId !== householdId || category.status !== "ACTIVE") {
-      throw notFound("category");
-    }
-    const actor = await this.findActiveMembership(input.createdByMembershipId, householdId);
-    if (!actor) throw forbidden("an active membership is required");
-    this.assertCanManageExclusion(actor, input.membershipId);
-    const periodStart = parseDate(input.periodStart, "periodStart");
-    const periodEnd = parseDate(input.periodEnd, "periodEnd");
-    if (periodStart >= periodEnd) throw badRequest("INVALID_PERIOD", "periodStart must be before periodEnd");
-    if (
-      await this.findOverlappingActiveExclusion({
-        membershipId: input.membershipId,
-        categoryId: input.categoryId,
-        from: periodStart,
-        to: periodEnd,
-      })
-    ) {
-      throw badRequest("OVERLAPPING_EXCLUSION", "exclusion period overlaps an active exclusion");
-    }
-    const exclusion: CategoryExclusion = {
-      id: id("excl"),
-      householdId,
-      membershipId: input.membershipId,
-      categoryId: input.categoryId,
-      periodStart,
-      periodEnd,
-      ...(input.reason ? { reason: input.reason.trim() } : {}),
-      status: "ACTIVE",
-      createdByMembershipId: actor.id,
-      createdAt: this.now(),
-    };
-    await CategoryExclusionModel.create({ ...exclusion, _id: exclusion.id });
-    return exclusion;
-  }
-
-  async cancelExclusion(
-    householdId: string,
-    exclusionId: string,
-    input: { cancelledByMembershipId: string },
-  ) {
-    const exclusion = plain<CategoryExclusion | null>(
-      await CategoryExclusionModel.findById(exclusionId).lean(),
-    );
-    if (!exclusion || exclusion.householdId !== householdId) throw notFound("category exclusion");
-    if (exclusion.status !== "ACTIVE") {
-      throw badRequest("EXCLUSION_ALREADY_CANCELLED", "exclusion has already been cancelled");
-    }
-    const actor = await this.findActiveMembership(input.cancelledByMembershipId, householdId);
-    if (!actor) throw forbidden("an active membership is required");
-    this.assertCanManageExclusion(actor, exclusion.membershipId);
-    exclusion.status = "CANCELLED";
-    exclusion.cancelledByMembershipId = actor.id;
-    exclusion.cancelledAt = this.now();
-    await CategoryExclusionModel.replaceOne({ _id: exclusion.id }, { ...exclusion, _id: exclusion.id });
-    return exclusion;
   }
 
   private async findActiveMembership(id: string, householdId: string, date = new Date()) {
@@ -207,12 +119,6 @@ export class ParticipationService {
         $or: [{ leftAt: null }, { leftAt: { $gt: date } }, { leftAt: { $exists: false } }],
       }).lean(),
     );
-  }
-
-  private assertCanManageExclusion(actor: { id: string; role: Role }, membershipId: string) {
-    if (actor.id !== membershipId && actor.role !== "ADMIN") {
-      throw forbidden("only an ADMIN can manage another member exclusion");
-    }
   }
 
   private async findOverlappingPreference(input: {
@@ -228,23 +134,6 @@ export class ParticipationService {
         categoryId: input.categoryId,
         validFrom: { $lt: end },
         $or: [{ validTo: null }, { validTo: { $gt: input.from } }, { validTo: { $exists: false } }],
-      }).lean(),
-    );
-  }
-
-  private async findOverlappingActiveExclusion(input: {
-    membershipId: string;
-    categoryId: string;
-    from: Date;
-    to: Date;
-  }) {
-    return plain<CategoryExclusion | null>(
-      await CategoryExclusionModel.findOne({
-        membershipId: input.membershipId,
-        categoryId: input.categoryId,
-        status: "ACTIVE",
-        periodStart: { $lt: input.to },
-        periodEnd: { $gt: input.from },
       }).lean(),
     );
   }

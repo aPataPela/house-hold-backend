@@ -2,12 +2,13 @@ import type {
   ChoreAssignment,
   ChoreAssignmentStatus,
   ChoreTask,
-  CategoryExclusion,
+  Absence,
   Category,
   CommonArea,
   Expense,
   ExpensePayment,
   Household,
+  MonthlySettlement,
   Membership,
   Preference,
   User,
@@ -65,10 +66,9 @@ export const preferenceResponse = (value: Preference) => ({
   validTo: value.validTo ? toDateString(value.validTo) : null,
 });
 
-export const exclusionResponse = (value: CategoryExclusion) => ({
-  exclusionId: value.id,
+export const absenceResponse = (value: Absence) => ({
+  absenceId: value.id,
   membershipId: value.membershipId,
-  categoryId: value.categoryId,
   status: value.status,
   periodStart: toDateString(value.periodStart),
   periodEnd: toDateString(value.periodEnd),
@@ -79,6 +79,18 @@ export const exclusionResponse = (value: CategoryExclusion) => ({
     ...(value.cancelledAt ? { cancelledAt: value.cancelledAt.toISOString() } : {}),
   },
   ...(value.reason ? { reason: value.reason } : {}),
+});
+
+export const monthlySettlementResponse = (value: MonthlySettlement) => ({
+  householdId: value.householdId,
+  month: value.month,
+  totalAmount: value.totalAmount,
+  daysInMonth: value.daysInMonth,
+  totalMemberDays: value.totalMemberDays,
+  totalAbsenceDays: value.totalAbsenceDays,
+  totalPresenceDays: value.totalPresenceDays,
+  dailyAmount: value.dailyAmount,
+  members: value.members,
 });
 
 export const expenseResponse = (value: Expense) => ({

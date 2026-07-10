@@ -39,8 +39,10 @@ afterAll(async () => {
 });
 
 const bootstrap = async () => {
+  const admin = await registerUser({ name: "Bootstrap Admin", email: "bootstrap-admin@mail.com" });
   const household = await request(app)
     .post("/api/v1/households")
+    .set("Authorization", `Bearer ${admin.accessToken}`)
     .send({ name: "Casa Ñuñoa", currency: "CLP", createdByUserId: "usr_1" })
     .expect(201);
   const householdId = household.body.householdId as string;
@@ -56,6 +58,8 @@ const bootstrap = async () => {
   return {
     householdId,
     adminId,
+    adminAccessToken: admin.accessToken,
+    inviteCode: household.body.inviteCode as string,
     memberId: member.body.membershipId as string,
     categoryId: category.body.categoryId as string,
   };
@@ -266,10 +270,10 @@ describe("Auth and household onboarding", () => {
       })
       .expect(200);
     await request(app)
-      .post(`/api/v1/households/${created.body.householdId}/category-exclusions`)
+      .post(`/api/v1/households/${created.body.householdId}/absences`)
+      .set("Authorization", `Bearer ${member.accessToken}`)
       .send({
         membershipId: joined.body.membership.membershipId,
-        categoryId: category.body.categoryId,
         periodStart: "2025-12-15",
         periodEnd: "2026-01-15",
         reason: "Viaje",
@@ -287,7 +291,6 @@ describe("Auth and household onboarding", () => {
     expect(rules.body.preferences).toHaveLength(1);
     expect(rules.body.preferences[0].mode).toBe("HALF");
     expect(rules.body.preferences[0].weight).toBe(0.5);
-    expect(rules.body.exclusions).toHaveLength(1);
 
     const outsider = await registerUser({ name: "Outsider", email: "rules-outsider@mail.com" });
     await request(app)
@@ -310,7 +313,7 @@ describe("V1 flow", () => {
       .expect(409);
   });
 
-  it("applies preferences, exclusions, expense snapshots and read APIs", async () => {
+  it("applies preferences, expense snapshots and read APIs", async () => {
     const setup = await bootstrap();
     await request(app)
       .put(
@@ -323,18 +326,6 @@ describe("V1 flow", () => {
         changedByMembershipId: setup.adminId,
       })
       .expect(200);
-    await request(app)
-      .post(`/api/v1/households/${setup.householdId}/category-exclusions`)
-      .send({
-        membershipId: setup.memberId,
-        categoryId: setup.categoryId,
-        periodStart: "2025-12-01",
-        periodEnd: "2025-12-31",
-        reason: "Viaje",
-        createdByMembershipId: setup.memberId,
-      })
-      .expect(201);
-
     const first = await request(app)
       .post(`/api/v1/households/${setup.householdId}/expenses`)
       .send({
@@ -360,7 +351,7 @@ describe("V1 flow", () => {
         status: "PAID",
       });
 
-    const excluded = await request(app)
+    const second = await request(app)
       .post(`/api/v1/households/${setup.householdId}/expenses`)
       .send({
         categoryId: setup.categoryId,
@@ -371,8 +362,12 @@ describe("V1 flow", () => {
         split: { mode: "AUTO_WEIGHTED" },
       })
       .expect(201);
-    expect(excluded.body.split.shares).toHaveLength(1);
-    expect(excluded.body.split.shares[0].membershipId).toBe(setup.adminId);
+    expect(second.body.split.shares).toEqual(
+      expect.arrayContaining([
+        { membershipId: setup.adminId, assignedAmount: 33333, weightUsed: 1 },
+        { membershipId: setup.memberId, assignedAmount: 16667, weightUsed: 0.5 },
+      ]),
+    );
     const list = await request(app)
       .get(`/api/v1/households/${setup.householdId}/expenses?from=2025-11-01&to=2026-01-01&limit=1`)
       .expect(200);
@@ -392,7 +387,7 @@ describe("V1 flow", () => {
     ).toBe(0);
   });
 
-  it("reconciles auto-weighted expenses when a member joins with a retroactive livingSince", async () => {
+  it("includes same-day members in expense splits", async () => {
     const admin = await registerUser({ name: "Admin", email: "retro-admin@mail.com" });
     const created = await request(app)
       .post("/api/v1/households")
@@ -410,7 +405,7 @@ describe("V1 flow", () => {
         categoryId: category.body.categoryId,
         payerMembershipId: created.body.creatorMembershipId,
         actorMembershipId: created.body.creatorMembershipId,
-        date: "2025-12-20",
+        date: "2026-01-01",
         totalAmount: 10000,
         split: { mode: "AUTO_WEIGHTED" },
       })
@@ -424,27 +419,35 @@ describe("V1 flow", () => {
         userId: member.user.userId,
         role: "MEMBER",
         invitedByMembershipId: created.body.creatorMembershipId,
-        livingSince: "2025-12-10",
+        livingSince: "2026-01-01",
       })
       .expect(201);
     const memberMembershipId = invited.body.membershipId as string;
 
     const reloaded = await request(app)
-      .get(`/api/v1/households/${created.body.householdId}/expenses?from=2025-12-01&to=2026-01-01`)
+      .get(`/api/v1/households/${created.body.householdId}/expenses?from=2026-01-01&to=2026-02-01`)
       .set("Authorization", `Bearer ${admin.accessToken}`)
       .expect(200);
-    expect(reloaded.body.expenses[0].split.shares.map((share: { membershipId: string }) => share.membershipId)).toEqual([
-      created.body.creatorMembershipId,
-      memberMembershipId,
-    ]);
-    expect(reloaded.body.expenses[0].split.shares).toEqual([
-      { membershipId: created.body.creatorMembershipId, assignedAmount: 5000, weightUsed: 1 },
-      { membershipId: memberMembershipId, assignedAmount: 5000, weightUsed: 1 },
-    ]);
-    expect(reloaded.body.expenses[0].settlement.shares).toEqual([
-      expect.objectContaining({ membershipId: created.body.creatorMembershipId, assignedAmount: 5000, status: "PAID" }),
-      expect.objectContaining({ membershipId: memberMembershipId, assignedAmount: 5000, status: "PENDING" }),
-    ]);
+    expect(reloaded.body.expenses[0].split.shares).toEqual(
+      expect.arrayContaining([
+        { membershipId: created.body.creatorMembershipId, assignedAmount: 5000, weightUsed: 1 },
+        { membershipId: memberMembershipId, assignedAmount: 5000, weightUsed: 1 },
+      ]),
+    );
+    expect(reloaded.body.expenses[0].settlement.shares).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          membershipId: created.body.creatorMembershipId,
+          assignedAmount: 5000,
+          status: "PAID",
+        }),
+        expect.objectContaining({
+          membershipId: memberMembershipId,
+          assignedAmount: 5000,
+          status: "PENDING",
+        }),
+      ]),
+    );
   });
 
   it("excludes future members from expense splits until their livingSince date", async () => {
@@ -493,10 +496,20 @@ describe("V1 flow", () => {
         split: { mode: "AUTO_WEIGHTED" },
       })
       .expect(201);
-    expect(afterLivingSince.body.split.shares.map((share: { membershipId: string }) => share.membershipId)).toEqual([
-      created.body.creatorMembershipId,
-      futureMember.body.membershipId,
-    ]);
+    expect(afterLivingSince.body.split.shares).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          membershipId: created.body.creatorMembershipId,
+          assignedAmount: 25000,
+          weightUsed: 1,
+        }),
+        expect.objectContaining({
+          membershipId: futureMember.body.membershipId,
+          assignedAmount: 25000,
+          weightUsed: 1,
+        }),
+      ]),
+    );
 
     const balance = await request(app)
       .get(`/api/v1/households/${created.body.householdId}/balance?from=2025-12-01&to=2026-02-01`)
@@ -574,70 +587,76 @@ describe("V1 flow", () => {
     expect(memberRow.netBalance).toBe(0);
   });
 
-  it("authorizes and validates category exclusions", async () => {
+  it("authorizes and validates absences", async () => {
     const setup = await bootstrap();
+    const memberUser = await registerUser({ name: "Absence Member", email: "absence-auth-member@mail.com" });
+    const joined = await request(app)
+      .post("/api/v1/households/join")
+      .set("Authorization", `Bearer ${memberUser.accessToken}`)
+      .send({ inviteCode: setup.inviteCode })
+      .expect(201);
+
     const invalidPeriod = await request(app)
-      .post(`/api/v1/households/${setup.householdId}/category-exclusions`)
+      .post(`/api/v1/households/${setup.householdId}/absences`)
+      .set("Authorization", `Bearer ${setup.adminAccessToken}`)
       .send({
-        membershipId: setup.memberId,
-        categoryId: setup.categoryId,
+        membershipId: setup.adminId,
         periodStart: "2025-12-31",
         periodEnd: "2025-12-31",
-        createdByMembershipId: setup.memberId,
+        createdByMembershipId: setup.adminId,
       });
     expect(invalidPeriod.status).toBe(400);
     expect(invalidPeriod.body.error.code).toBe("INVALID_PERIOD");
 
     await request(app)
-      .post(`/api/v1/households/${setup.householdId}/category-exclusions`)
+      .post(`/api/v1/households/${setup.householdId}/absences`)
+      .set("Authorization", `Bearer ${memberUser.accessToken}`)
       .send({
         membershipId: setup.adminId,
-        categoryId: setup.categoryId,
         periodStart: "2025-12-01",
         periodEnd: "2025-12-31",
-        createdByMembershipId: setup.memberId,
+        createdByMembershipId: joined.body.membership.membershipId,
       })
       .expect(403);
 
-    const exclusion = await request(app)
-      .post(`/api/v1/households/${setup.householdId}/category-exclusions`)
+    const absence = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/absences`)
+      .set("Authorization", `Bearer ${memberUser.accessToken}`)
       .send({
-        membershipId: setup.memberId,
-        categoryId: setup.categoryId,
+        membershipId: joined.body.membership.membershipId,
         periodStart: "2025-12-01",
         periodEnd: "2025-12-31",
         reason: "Viaje",
-        createdByMembershipId: setup.adminId,
+        createdByMembershipId: joined.body.membership.membershipId,
       })
       .expect(201);
-    expect(exclusion.body.exclusionId).toBeTypeOf("string");
-    expect(exclusion.body.status).toBe("ACTIVE");
-    expect(exclusion.body.audit.createdByMembershipId).toBe(setup.adminId);
+    expect(absence.body.absenceId).toBeTypeOf("string");
+    expect(absence.body.status).toBe("ACTIVE");
+    expect(absence.body.audit.createdByMembershipId).toBe(joined.body.membership.membershipId);
 
     const overlapping = await request(app)
-      .post(`/api/v1/households/${setup.householdId}/category-exclusions`)
+      .post(`/api/v1/households/${setup.householdId}/absences`)
+      .set("Authorization", `Bearer ${memberUser.accessToken}`)
       .send({
-        membershipId: setup.memberId,
-        categoryId: setup.categoryId,
+        membershipId: joined.body.membership.membershipId,
         periodStart: "2025-12-15",
         periodEnd: "2026-01-10",
-        createdByMembershipId: setup.adminId,
+        createdByMembershipId: joined.body.membership.membershipId,
       });
     expect(overlapping.status).toBe(400);
-    expect(overlapping.body.error.code).toBe("OVERLAPPING_EXCLUSION");
+    expect(overlapping.body.error.code).toBe("OVERLAPPING_ABSENCE");
 
     await request(app)
-      .post(
-        `/api/v1/households/${setup.householdId}/category-exclusions/${exclusion.body.exclusionId}/cancel`,
-      )
-      .send({ cancelledByMembershipId: setup.memberId })
+      .post(`/api/v1/households/${setup.householdId}/absences/${absence.body.absenceId}/cancel`)
+      .set("Authorization", `Bearer ${memberUser.accessToken}`)
+      .send({ cancelledByMembershipId: joined.body.membership.membershipId })
       .expect(200);
 
-    const adminExclusion = await request(app)
-      .post(`/api/v1/households/${setup.householdId}/category-exclusions`)
+    const adminAbsence = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/absences`)
+      .set("Authorization", `Bearer ${setup.adminAccessToken}`)
       .send({
         membershipId: setup.adminId,
-        categoryId: setup.categoryId,
         periodStart: "2025-12-20",
         periodEnd: "2026-01-10",
         createdByMembershipId: setup.adminId,
@@ -645,17 +664,26 @@ describe("V1 flow", () => {
       .expect(201);
 
     await request(app)
-      .post(
-        `/api/v1/households/${setup.householdId}/category-exclusions/${adminExclusion.body.exclusionId}/cancel`,
-      )
-      .send({ cancelledByMembershipId: setup.memberId })
+      .post(`/api/v1/households/${setup.householdId}/absences/${adminAbsence.body.absenceId}/cancel`)
+      .set("Authorization", `Bearer ${memberUser.accessToken}`)
+      .send({ cancelledByMembershipId: joined.body.membership.membershipId })
       .expect(403);
 
-    const memberExclusion = await request(app)
-      .post(`/api/v1/households/${setup.householdId}/category-exclusions`)
+    await request(app)
+      .post(`/api/v1/households/${setup.householdId}/absences/${adminAbsence.body.absenceId}/cancel`)
+      .set("Authorization", `Bearer ${setup.adminAccessToken}`)
+      .send({ cancelledByMembershipId: setup.adminId })
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.status).toBe("CANCELLED");
+        expect(res.body.audit.cancelledByMembershipId).toBe(setup.adminId);
+      });
+
+    const memberAbsence = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/absences`)
+      .set("Authorization", `Bearer ${setup.adminAccessToken}`)
       .send({
-        membershipId: setup.memberId,
-        categoryId: setup.categoryId,
+        membershipId: joined.body.membership.membershipId,
         periodStart: "2025-12-20",
         periodEnd: "2026-01-20",
         createdByMembershipId: setup.adminId,
@@ -663,9 +691,8 @@ describe("V1 flow", () => {
       .expect(201);
 
     await request(app)
-      .post(
-        `/api/v1/households/${setup.householdId}/category-exclusions/${memberExclusion.body.exclusionId}/cancel`,
-      )
+      .post(`/api/v1/households/${setup.householdId}/absences/${memberAbsence.body.absenceId}/cancel`)
+      .set("Authorization", `Bearer ${setup.adminAccessToken}`)
       .send({ cancelledByMembershipId: setup.adminId })
       .expect(200)
       .expect((res) => {
@@ -674,61 +701,175 @@ describe("V1 flow", () => {
       });
   });
 
-  it("keeps expense snapshots after exclusions are cancelled", async () => {
-    const setup = await bootstrap();
-    const exclusion = await request(app)
-      .post(`/api/v1/households/${setup.householdId}/category-exclusions`)
+  it("keeps absence snapshots after cancellation and computes monthly settlement", async () => {
+    const admin = await registerUser({ name: "Admin", email: "absence-admin@mail.com" });
+    const created = await request(app)
+      .post("/api/v1/households")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ name: "Casa Ausencias", currency: "CLP", livingSince: "2026-01-01" })
+      .expect(201);
+    const member = await registerUser({ name: "Member", email: "absence-member@mail.com" });
+    const joined = await request(app)
+      .post("/api/v1/households/join")
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .send({ inviteCode: created.body.inviteCode, livingSince: "2026-01-01" })
+      .expect(201);
+    const category = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/categories`)
+      .send({ name: "Feria", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+    const absence = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/absences`)
+      .set("Authorization", `Bearer ${member.accessToken}`)
       .send({
-        membershipId: setup.memberId,
-        categoryId: setup.categoryId,
-        periodStart: "2025-12-01",
-        periodEnd: "2025-12-31",
-        createdByMembershipId: setup.memberId,
+        membershipId: joined.body.membership.membershipId,
+        periodStart: "2026-01-01",
+        periodEnd: "2026-02-01",
+        createdByMembershipId: joined.body.membership.membershipId,
       })
       .expect(201);
 
-    const excludedExpense = await request(app)
-      .post(`/api/v1/households/${setup.householdId}/expenses`)
+    const monthExpense = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/expenses`)
       .send({
-        categoryId: setup.categoryId,
-        payerMembershipId: setup.adminId,
-        actorMembershipId: setup.adminId,
-        date: "2025-12-10",
+        categoryId: category.body.categoryId,
+        payerMembershipId: created.body.creatorMembershipId,
+        actorMembershipId: created.body.creatorMembershipId,
+        date: "2026-01-01",
         totalAmount: 50000,
         split: { mode: "AUTO_WEIGHTED" },
       })
       .expect(201);
-    expect(excludedExpense.body.split.shares).toEqual([
-      { membershipId: setup.adminId, assignedAmount: 50000, weightUsed: 1 },
-    ]);
+    expect(monthExpense.body.split.shares).toEqual(
+      expect.arrayContaining([
+        { membershipId: created.body.creatorMembershipId, assignedAmount: 25000, weightUsed: 1 },
+        { membershipId: joined.body.membership.membershipId, assignedAmount: 25000, weightUsed: 1 },
+      ]),
+    );
 
     await request(app)
-      .post(
-        `/api/v1/households/${setup.householdId}/category-exclusions/${exclusion.body.exclusionId}/cancel`,
-      )
-      .send({ cancelledByMembershipId: setup.memberId })
+      .post(`/api/v1/households/${created.body.householdId}/absences/${absence.body.absenceId}/cancel`)
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .send({ cancelledByMembershipId: joined.body.membership.membershipId })
       .expect(200);
 
-    const postCancelExpense = await request(app)
-      .post(`/api/v1/households/${setup.householdId}/expenses`)
+    const list = await request(app)
+      .get(`/api/v1/households/${created.body.householdId}/absences?from=2026-01-01&to=2026-01-12`)
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .expect(200);
+    const persistedAbsence = list.body.absences.find(
+      (item: { absenceId: string }) => item.absenceId === absence.body.absenceId,
+    );
+    expect(persistedAbsence.status).toBe("CANCELLED");
+
+    const settlement = await request(app)
+      .get(`/api/v1/households/${created.body.householdId}/monthly-settlement?month=2026-01`)
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .expect(200);
+    expect(settlement.body.totalAmount).toBe(50000);
+    expect(
+      settlement.body.members.reduce(
+        (sum: number, row: { assignedAmount: number }) => sum + row.assignedAmount,
+        0,
+      ),
+    ).toBe(50000);
+  });
+
+  it("reduces an ADMIN resident's presence days and assigned monthly amount while absent", async () => {
+    const admin = await registerUser({ name: "Admin", email: "settlement-admin@mail.com" });
+    const created = await request(app)
+      .post("/api/v1/households")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ name: "Casa Liquidación", currency: "CLP", livingSince: "2026-01-01" })
+      .expect(201);
+    const member = await registerUser({ name: "Member", email: "settlement-member@mail.com" });
+    const joined = await request(app)
+      .post("/api/v1/households/join")
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .send({ inviteCode: created.body.inviteCode, livingSince: "2026-01-01" })
+      .expect(201);
+    const category = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/categories`)
+      .send({ name: "Feria", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+
+    await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/absences`)
+      .set("Authorization", `Bearer ${admin.accessToken}`)
       .send({
-        categoryId: setup.categoryId,
-        payerMembershipId: setup.adminId,
-        actorMembershipId: setup.adminId,
-        date: "2025-12-11",
-        totalAmount: 50000,
+        membershipId: created.body.creatorMembershipId,
+        periodStart: "2026-01-01",
+        periodEnd: "2026-01-16",
+        createdByMembershipId: created.body.creatorMembershipId,
+      })
+      .expect(201);
+
+    await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/expenses`)
+      .send({
+        categoryId: category.body.categoryId,
+        payerMembershipId: created.body.creatorMembershipId,
+        actorMembershipId: created.body.creatorMembershipId,
+        date: "2026-01-01",
+        totalAmount: 60000,
         split: { mode: "AUTO_WEIGHTED" },
       })
       .expect(201);
-    expect(postCancelExpense.body.split.shares).toHaveLength(2);
 
-    const list = await request(app)
-      .get(`/api/v1/households/${setup.householdId}/expenses?from=2025-12-01&to=2025-12-12`)
+    const settlement = await request(app)
+      .get(`/api/v1/households/${created.body.householdId}/monthly-settlement?month=2026-01`)
+      .set("Authorization", `Bearer ${admin.accessToken}`)
       .expect(200);
-    const persistedExcludedExpense = list.body.expenses.find(
-      (expense: { expenseId: string }) => expense.expenseId === excludedExpense.body.expenseId,
+    expect(settlement.body.totalAmount).toBe(60000);
+    expect(settlement.body.totalAbsenceDays).toBe(15);
+    const adminRow = settlement.body.members.find(
+      (row: { membershipId: string }) => row.membershipId === created.body.creatorMembershipId,
     );
-    expect(persistedExcludedExpense.split.shares).toEqual(excludedExpense.body.split.shares);
+    const memberRow = settlement.body.members.find(
+      (row: { membershipId: string }) => row.membershipId === joined.body.membership.membershipId,
+    );
+    expect(adminRow).toMatchObject({ memberDays: 31, absenceDays: 15, presenceDays: 16 });
+    expect(adminRow.assignedAmount).toBe(20426);
+    expect(adminRow.assignedAmount).toBeLessThan(memberRow.assignedAmount);
+  });
+
+  it("excludes an absent ADMIN resident from chore generation", async () => {
+    const setup = await bootstrap();
+    await request(app)
+      .post(`/api/v1/households/${setup.householdId}/absences`)
+      .set("Authorization", `Bearer ${setup.adminAccessToken}`)
+      .send({
+        membershipId: setup.adminId,
+        periodStart: "2025-12-29",
+        periodEnd: "2026-01-06",
+        createdByMembershipId: setup.adminId,
+      })
+      .expect(201);
+    const area = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/common-areas`)
+      .send({ name: "Cocina", createdByMembershipId: setup.adminId })
+      .expect(201);
+    await request(app)
+      .post(`/api/v1/households/${setup.householdId}/chores/tasks`)
+      .send({
+        commonAreaId: area.body.commonAreaId,
+        name: "Limpiar cocina",
+        priority: 1,
+        assigneeLimit: 1,
+        createdByMembershipId: setup.adminId,
+      })
+      .expect(201);
+
+    const week = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/chores/weeks`)
+      .send({
+        weekStart: "2026-01-05",
+        createdByMembershipId: setup.adminId,
+      })
+      .expect(201);
+    expect(week.body.tasks).toHaveLength(1);
+    expect(week.body.tasks[0].assignments).toHaveLength(1);
+    expect(week.body.tasks[0].assignments[0].membershipId).toBe(setup.memberId);
   });
 
   it("validates manual totals and strict dates", async () => {

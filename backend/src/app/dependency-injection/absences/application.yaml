@@ -1,0 +1,25 @@
+services:
+  Service.Absence:
+    class: ../../../context/absences/services/absence.service
+    main: AbsenceService
+    arguments: ["@App.Now"]
+
+  Controller.Absence.Create:
+    class: ../../controllers/absences/create/CreateAbsenceController
+    main: CreateAbsenceController
+    arguments: ["@Service.Absence"]
+
+  Controller.Absence.Cancel:
+    class: ../../controllers/absences/create/CancelAbsenceController
+    main: CancelAbsenceController
+    arguments: ["@Service.Absence"]
+
+  Controller.Absence.List:
+    class: ../../controllers/absences/find/ListAbsencesController
+    main: ListAbsencesController
+    arguments: ["@Service.Absence"]
+
+  Controller.Absence.MonthlySettlement:
+    class: ../../controllers/absences/find/GetMonthlySettlementController
+    main: GetMonthlySettlementController
+    arguments: ["@Service.Absence"]

@@ -12,6 +12,7 @@ import { parseDate } from "../../shared/utils/date";
 import { activeMembershipCriteria, effectiveMembershipStart } from "../../shared/utils/membership";
 import { HouseholdModel } from "../../households/models/household.model";
 import { MembershipModel } from "../../households/models/membership.model";
+import { AbsenceModel } from "../../absences/models/absence.model";
 import { CommonAreaModel } from "../models/common-area.model";
 import { ChoreTaskModel } from "../models/chore-task.model";
 import { ChoreWeekModel } from "../models/chore-week.model";
@@ -134,6 +135,8 @@ export class ChoreService {
 
     const weekEnd = new Date(weekStart);
     weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
+    const absentMembershipIds = await this.findAbsentMembers(householdId, weekStart, new Date(weekEnd.getTime() + 86400000));
+    const availableMembers = members.filter((member) => !absentMembershipIds.has(member.id));
     const week: ChoreWeek = {
       id: id("cw"),
       householdId,
@@ -145,7 +148,7 @@ export class ChoreService {
     const assignments = await this.buildAssignments(
       week,
       taskSummaries.map((summary) => summary.task),
-      members,
+      availableMembers,
     );
     await ChoreWeekModel.create({ ...week, _id: week.id });
     if (assignments.length > 0) {
@@ -354,5 +357,17 @@ export class ChoreService {
       await CommonAreaModel.find({ householdId, _id: { $in: areaIds } }).lean(),
     );
     return new Map(areas.map((area) => [area.id, area]));
+  }
+
+  private async findAbsentMembers(householdId: string, from: Date, to: Date) {
+    const absences = plain<Array<{ membershipId: string }>>(
+      await AbsenceModel.find({
+        householdId,
+        status: "ACTIVE",
+        periodStart: { $lt: to },
+        periodEnd: { $gt: from },
+      }).lean(),
+    );
+    return new Set(absences.map((absence) => absence.membershipId));
   }
 }

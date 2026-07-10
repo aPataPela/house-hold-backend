@@ -8,7 +8,7 @@ Estado actualizado: 2026-06-18.
 | -1       | Arquitectura, contratos y roadmap Express/Mongoose          | Completada |
 | 0        | Fundación Express, Mongo, middleware y healthchecks         | Completada |
 | A        | Household, memberships y categories                         | Completada |
-| B        | Preferencias y exclusiones autoservicio                     | Completada |
+| B        | Preferencias y ausencias autoservicio                       | Completada |
 | C        | Registro y reparto de gastos                                | Completada |
 | D        | Listado paginado y balance                                  | Completada |
 | E        | Docker, CI, logging, seguridad y documentación              | Completada |
@@ -22,7 +22,7 @@ Una fase solo se considera completada cuando compila, pasa lint y tiene pruebas 
 
 1. Crear household y ADMIN inicial.
 2. Invitar memberships y crear categorías.
-3. Configurar preferencias y exclusiones temporales autoservicio.
+3. Configurar preferencias y ausencias temporales autoservicio.
 4. Registrar gastos con snapshot de reparto.
 5. Consultar gastos y balance por periodo.
 6. Configurar espacios comunes/tareas y generar asignaciones semanales rotativas.

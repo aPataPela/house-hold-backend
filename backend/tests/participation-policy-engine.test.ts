@@ -11,7 +11,6 @@ describe("ParticipationPolicyEngine", () => {
       engine.calculateSplit(3000, {
         members,
         preferences: [],
-        exclusions: [],
         date,
       }),
     ).toEqual([
@@ -21,7 +20,7 @@ describe("ParticipationPolicyEngine", () => {
     ]);
   });
 
-  it("applies half participation and exclusions", () => {
+  it("applies half participation and zero-weight rules", () => {
     expect(
       engine.calculateSplit(3000, {
         members,
@@ -39,7 +38,6 @@ describe("ParticipationPolicyEngine", () => {
             validFrom: new Date("2026-02-01T00:00:00.000Z"),
           },
         ],
-        exclusions: [],
         date,
       }),
     ).toEqual([
@@ -60,7 +58,6 @@ describe("ParticipationPolicyEngine", () => {
             validFrom: new Date("2026-02-01T00:00:00.000Z"),
           },
         ],
-        exclusions: [],
         date,
       }),
     ).toEqual([
@@ -81,7 +78,6 @@ describe("ParticipationPolicyEngine", () => {
             validFrom: new Date("2026-02-01T00:00:00.000Z"),
           },
         ],
-        exclusions: [],
         date,
       }),
     ).toThrowError(/at least one member must participate/);

@@ -8,8 +8,8 @@ export const activeMembershipCriteria = (date: Date) => ({
   $and: [
     {
       $or: [
-        { livingSince: { $exists: false }, joinedAt: { $lte: date } },
-        { livingSince: { $lte: date } },
+        { livingSince: { $exists: false }, joinedAt: { $lte: endOfUtcDay(date) } },
+        { livingSince: { $lte: endOfUtcDay(date) } },
       ],
     },
     {
@@ -17,3 +17,9 @@ export const activeMembershipCriteria = (date: Date) => ({
     },
   ],
 });
+
+function endOfUtcDay(date: Date) {
+  const result = new Date(date);
+  result.setUTCHours(23, 59, 59, 999);
+  return result;
+}

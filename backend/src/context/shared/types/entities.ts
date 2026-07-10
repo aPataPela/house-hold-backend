@@ -66,11 +66,10 @@ export interface Preference {
   validTo?: Date | null;
 }
 
-export interface CategoryExclusion {
+export interface Absence {
   id: string;
   householdId: string;
   membershipId: string;
-  categoryId: string;
   periodStart: Date;
   periodEnd: Date;
   reason?: string;
@@ -79,6 +78,26 @@ export interface CategoryExclusion {
   createdAt: Date;
   cancelledByMembershipId?: string;
   cancelledAt?: Date;
+}
+
+export interface MonthlySettlementMember {
+  membershipId: string;
+  memberDays: number;
+  absenceDays: number;
+  presenceDays: number;
+  assignedAmount: number;
+}
+
+export interface MonthlySettlement {
+  householdId: string;
+  month: string;
+  totalAmount: number;
+  daysInMonth: number;
+  totalMemberDays: number;
+  totalAbsenceDays: number;
+  totalPresenceDays: number;
+  dailyAmount: number;
+  members: MonthlySettlementMember[];
 }
 
 export interface ExpenseShare {

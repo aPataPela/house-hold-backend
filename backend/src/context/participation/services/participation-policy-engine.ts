@@ -9,12 +9,6 @@ type ParticipationRule = {
   validTo?: Date | null;
 };
 
-type ParticipationExclusion = {
-  membershipId: string;
-  periodStart: Date;
-  periodEnd: Date;
-};
-
 type HouseholdMember = { id: string };
 
 type ResolvedParticipant = {
@@ -46,7 +40,6 @@ export class ParticipationPolicyEngine {
     input: {
       members: HouseholdMember[];
       preferences: ParticipationRule[];
-      exclusions: ParticipationExclusion[];
       date: Date;
     },
   ): SplitShare[] {
@@ -61,14 +54,8 @@ export class ParticipationPolicyEngine {
   resolveParticipants(input: {
     members: HouseholdMember[];
     preferences: ParticipationRule[];
-    exclusions: ParticipationExclusion[];
     date: Date;
   }): ResolvedParticipant[] {
-    const exclusions = new Set(
-      input.exclusions
-        .filter((item) => item.periodStart <= input.date && item.periodEnd > input.date)
-        .map((item) => item.membershipId),
-    );
     const latestByMember = new Map<string, ParticipationRule>();
     for (const preference of [...input.preferences].sort(
       (a, b) => b.validFrom.getTime() - a.validFrom.getTime(),
@@ -81,7 +68,6 @@ export class ParticipationPolicyEngine {
     }
 
     const participants = input.members.flatMap((member) => {
-      if (exclusions.has(member.id)) return [];
       const rule = latestByMember.get(member.id);
       const weight = rule ? this.resolveWeight(rule) : 1;
       if (!Number.isFinite(weight) || weight < 0) {

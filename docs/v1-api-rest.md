@@ -35,13 +35,22 @@ Errores:
   - Actualiza la regla cuando coincide exactamente el periodo; rechaza otros periodos solapados. Responde `200`.
 - `GET /households/{householdId}/participation-rules?on=2026-02-01`
   - Requiere sesión y una membresía activa en la casa.
-  - Lista preferencias vigentes en la fecha y exclusiones activas actuales o futuras. Responde `200`.
-- `POST /households/{householdId}/category-exclusions`
-  - Body: `{ "membershipId": "m_2", "categoryId": "cat_1", "periodStart": "2026-03-01", "periodEnd": "2026-04-01", "reason": "Viaje", "createdByMembershipId": "m_2" }`
-  - Crea una exclusión `ACTIVE` efectiva inmediatamente. Un `MEMBER` solo puede gestionarse a sí mismo; un `ADMIN` puede gestionar cualquier miembro. Rechaza periodos solapados activos. Responde `201`.
-- `POST /households/{householdId}/category-exclusions/{exclusionId}/cancel`
+  - Lista preferencias vigentes en la fecha. Responde `200`.
+
+## Ausencias
+
+- `POST /households/{householdId}/absences`
+  - Body: `{ "membershipId": "m_2", "periodStart": "2026-03-01", "periodEnd": "2026-04-01", "reason": "Viaje", "createdByMembershipId": "m_2" }`
+  - Crea una ausencia `ACTIVE` para un rango de fechas. Toda membresía residente activa puede gestionar sus propias ausencias, tanto `ADMIN` como `MEMBER`; adicionalmente, un `ADMIN` puede gestionar las de otros integrantes. Rechaza periodos solapados activos. Responde `201`.
+- `POST /households/{householdId}/absences/{absenceId}/cancel`
   - Body: `{ "cancelledByMembershipId": "m_2" }`
   - Cancela sin borrar histórico. Responde `200` con estado `CANCELLED`.
+- `GET /households/{householdId}/absences?from=2026-03-01&to=2026-04-01`
+  - Requiere sesión y una membresía activa en la casa.
+  - Lista ausencias que se cruzan con el rango indicado. Responde `200`.
+- `GET /households/{householdId}/monthly-settlement?month=2026-03`
+  - Requiere sesión y una membresía activa en la casa.
+  - Devuelve la liquidación derivada del mes usando gastos y días de presencia efectivos descontando ausencias activas para todos los residentes, incluidos quienes tienen rol `ADMIN`. Responde `200`.
 
 ## Gastos
 
@@ -69,7 +78,7 @@ Errores:
   - Lista tareas activas con su espacio común. Responde `200`.
 - `POST /households/{householdId}/chores/weeks`
   - Body: `{ "weekStart": "2026-01-05", "createdByMembershipId": "m_1" }`
-  - Solo ADMIN activo. `weekStart` debe ser lunes. Genera asignaciones rotativas idempotentes: cada miembro activo recibe máximo una tarea, se cubren primero las tareas más prioritarias y luego cupos extra. Responde `201`.
+  - Solo ADMIN activo. `weekStart` debe ser lunes. Genera asignaciones rotativas idempotentes: cada residente activo y no ausente, incluido el `ADMIN`, recibe máximo una tarea; se cubren primero las tareas más prioritarias y luego cupos extra. Responde `201`.
 - `GET /households/{householdId}/chores/weeks/{weekStart}`
   - Consulta tareas asignadas de una semana. `weeklyStatus` es `DONE` solo si todos los asignados marcaron `DONE`; `NOT_DONE` si alguno marcó `NOT_DONE`; si no, `PENDING`. Responde `200`.
 - `PATCH /households/{householdId}/chores/assignments/{assignmentId}`

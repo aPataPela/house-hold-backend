@@ -7,7 +7,6 @@ import { activeMembershipCriteria } from "../../shared/utils/membership";
 import { CategoryModel } from "../../households/models/category.model";
 import { HouseholdModel } from "../../households/models/household.model";
 import { MembershipModel } from "../../households/models/membership.model";
-import { CategoryExclusionModel } from "../../participation/models/category-exclusion.model";
 import { PreferenceModel } from "../../participation/models/preference.model";
 import { ParticipationPolicyEngine } from "../../participation/services/participation-policy-engine";
 import { ExpensePaymentModel } from "../models/expense-payment.model";
@@ -111,7 +110,6 @@ export class ExpenseService {
       shares = this.policyEngine.calculateSplit(input.totalAmount, {
         members,
         preferences: await this.listPreferences(householdId, input.categoryId, date),
-        exclusions: await this.listActiveExclusions(householdId, input.categoryId, date),
         date,
       });
     }
@@ -316,18 +314,6 @@ export class ExpenseService {
     );
   }
 
-  private async listActiveExclusions(householdId: string, categoryId: string, date: Date) {
-    return plain<Array<{ membershipId: string; periodStart: Date; periodEnd: Date }>>(
-      await CategoryExclusionModel.find({
-        householdId,
-        categoryId,
-        status: "ACTIVE",
-        periodStart: { $lte: date },
-        periodEnd: { $gt: date },
-      }).lean(),
-    );
-  }
-
   private async listExpenses(query: {
     householdId: string;
     from: Date;
@@ -501,7 +487,6 @@ export class ExpenseService {
       const shares = this.policyEngine.calculateSplit(expense.totalAmount, {
         members,
         preferences: await this.listPreferences(householdId, expense.categoryId, expense.date),
-        exclusions: await this.listActiveExclusions(householdId, expense.categoryId, expense.date),
         date: expense.date,
       });
       await ExpenseModel.updateOne(

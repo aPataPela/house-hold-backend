@@ -21,8 +21,9 @@ Estado: implementada el 2026-06-18. Reorganizada el 2026-07-02.
   - `server.ts`: conexión Mongo, escucha y apagado.
 - `src/context`: módulos funcionales de la aplicación.
   - `households`: households, memberships y categories.
-  - `participation`: preferencias y exclusiones autoservicio.
+  - `participation`: preferencias de reparto por categoría.
   - `expenses`: gastos, listado y balance.
+  - `absences`: ausencias temporales, liquidación mensual y disponibilidad para chores.
   - `chores`: espacios comunes, tareas domésticas y asignaciones semanales.
   - `shared`: tipos, errores, serialización HTTP y utilidades comunes.
 
@@ -43,6 +44,7 @@ Cuando existan nuevos dominios funcionales, por ejemplo `users` o `payments`, se
 - Los shares son snapshots históricos y siempre suman el total.
 - El cursor de gastos es opaco y contiene `date + id`.
 - Crear household y ADMIN inicial usa una transacción.
+- `ADMIN` es un permiso adicional de una membresía residente: no la excluye de gastos, liquidaciones, ausencias ni tareas domésticas.
 - Las tareas domésticas rotan semanalmente por historial de asignación y prioridad.
 - Autenticación y JWT quedan fuera de V1.
 

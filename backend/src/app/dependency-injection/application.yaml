@@ -5,4 +5,5 @@ imports:
   - resource: users/application.yaml
   - resource: participation/application.yaml
   - resource: expenses/application.yaml
+  - resource: absences/application.yaml
   - resource: chores/application.yaml

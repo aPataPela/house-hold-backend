@@ -19,23 +19,6 @@ export const setPreferenceSchema = z
   })
   .strict();
 
-export const createExclusionSchema = z
-  .object({
-    membershipId: text,
-    categoryId: text,
-    periodStart: date,
-    periodEnd: date,
-    reason: text.optional(),
-    createdByMembershipId: text,
-  })
-  .strict();
-
-export const cancelExclusionSchema = z
-  .object({
-    cancelledByMembershipId: text,
-  })
-  .strict();
-
 export const listParticipationRulesQuerySchema = z
   .object({
     on: date,
