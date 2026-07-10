@@ -1,0 +1,19 @@
+{
+  "name": "Casa Viva",
+  "short_name": "Casa Viva",
+  "description": "Gastos, saldos y tareas para una casa compartida.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#e9eeea",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
