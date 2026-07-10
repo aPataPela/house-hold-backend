@@ -18,7 +18,12 @@ export class ParticipationService {
     categoryId: string,
     membershipId: string,
     input: {
-      mode: "INCLUDE_DEFAULT" | "EXCLUDE_DEFAULT";
+      mode:
+        | "PARTICIPATES"
+        | "HALF"
+        | "NO_PARTICIPATES"
+        | "INCLUDE_DEFAULT"
+        | "EXCLUDE_DEFAULT";
       weight?: number | undefined;
       validFrom: string;
       validTo?: string | null | undefined;
@@ -38,12 +43,30 @@ export class ParticipationService {
     if (validTo && validFrom >= validTo) {
       throw badRequest("INVALID_PERIOD", "validFrom must be before validTo");
     }
-    if (await this.findOverlappingPreference({ membershipId, categoryId, from: validFrom, to: validTo })) {
-      throw badRequest("OVERLAPPING_PREFERENCE", "preference period overlaps an existing preference");
-    }
-    const weight = input.mode === "INCLUDE_DEFAULT" ? (input.weight ?? 1) : 0;
-    if (input.mode === "INCLUDE_DEFAULT" && weight <= 0) {
-      throw badRequest("INVALID_WEIGHT", "weight must be positive");
+    const weight = this.resolveWeight(input.mode, input.weight);
+    const overlapping = await this.findOverlappingPreference({
+      membershipId,
+      categoryId,
+      from: validFrom,
+      to: validTo,
+    });
+    if (overlapping) {
+      const sameStart = overlapping.validFrom.getTime() === validFrom.getTime();
+      const overlappingEnd = overlapping.validTo?.getTime() ?? null;
+      const requestedEnd = validTo?.getTime() ?? null;
+      if (!sameStart || overlappingEnd !== requestedEnd) {
+        throw badRequest("OVERLAPPING_PREFERENCE", "preference period overlaps an existing preference");
+      }
+      const updated: Preference = {
+        ...overlapping,
+        mode: input.mode,
+        weight,
+      };
+      await PreferenceModel.replaceOne(
+        { _id: overlapping.id },
+        { ...updated, _id: overlapping.id },
+      );
+      return updated;
     }
     const preference: Preference = {
       id: id("pref"),
@@ -57,6 +80,48 @@ export class ParticipationService {
     };
     await PreferenceModel.create({ ...preference, _id: preference.id });
     return preference;
+  }
+
+  async listRules(householdId: string, userId: string, input: { on: string }) {
+    const viewer = await MembershipModel.findOne({
+      householdId,
+      userId,
+      status: "ACTIVE",
+      joinedAt: { $lte: this.now() },
+      $or: [
+        { leftAt: null },
+        { leftAt: { $gt: this.now() } },
+        { leftAt: { $exists: false } },
+      ],
+    }).lean();
+    if (!viewer) throw forbidden("an active household membership is required");
+
+    const on = parseDate(input.on, "on");
+    const [preferences, exclusions] = await Promise.all([
+      PreferenceModel.find({
+        householdId,
+        validFrom: { $lte: on },
+        $or: [
+          { validTo: null },
+          { validTo: { $gt: on } },
+          { validTo: { $exists: false } },
+        ],
+      })
+        .sort({ categoryId: 1, membershipId: 1, validFrom: -1 })
+        .lean(),
+      CategoryExclusionModel.find({
+        householdId,
+        status: "ACTIVE",
+        periodEnd: { $gt: on },
+      })
+        .sort({ periodStart: 1 })
+        .lean(),
+    ]);
+
+    return {
+      preferences: plain<Preference[]>(preferences),
+      exclusions: plain<CategoryExclusion[]>(exclusions),
+    };
   }
 
   async createExclusion(
@@ -182,5 +247,24 @@ export class ParticipationService {
         periodEnd: { $gt: input.from },
       }).lean(),
     );
+  }
+
+  private resolveWeight(
+    mode:
+      | "PARTICIPATES"
+      | "HALF"
+      | "NO_PARTICIPATES"
+      | "INCLUDE_DEFAULT"
+      | "EXCLUDE_DEFAULT",
+    weight?: number | undefined,
+  ) {
+    if (mode === "PARTICIPATES") return 1;
+    if (mode === "HALF") return 0.5;
+    if (mode === "NO_PARTICIPATES" || mode === "EXCLUDE_DEFAULT") return 0;
+    const resolved = weight ?? 1;
+    if (resolved <= 0) {
+      throw badRequest("INVALID_WEIGHT", "weight must be positive");
+    }
+    return resolved;
   }
 }

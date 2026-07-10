@@ -1,18 +1,39 @@
 export type Role = "ADMIN" | "MEMBER";
 export type Status = "ACTIVE" | "CANCELLED";
+export type ChoreAssignmentStatus = "PENDING" | "DONE" | "NOT_DONE";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  createdAt: Date;
+}
+
+export interface RefreshToken {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  createdAt: Date;
+  revokedAt?: Date | null;
+}
 
 export interface Household {
   id: string;
   name: string;
   currency: "CLP";
   approvalMode: "ADMIN_ONLY";
+  inviteCode?: string;
   createdAt: Date;
 }
 
 export interface Membership {
   id: string;
   householdId: string;
+  householdName?: string;
   userId: string;
+  userName?: string;
   role: Role;
   status: "ACTIVE" | "INACTIVE";
   joinedAt: Date;
@@ -33,7 +54,12 @@ export interface Preference {
   householdId: string;
   membershipId: string;
   categoryId: string;
-  mode: "INCLUDE_DEFAULT" | "EXCLUDE_DEFAULT";
+  mode:
+    | "PARTICIPATES"
+    | "HALF"
+    | "NO_PARTICIPATES"
+    | "INCLUDE_DEFAULT"
+    | "EXCLUDE_DEFAULT";
   weight: number;
   validFrom: Date;
   validTo?: Date | null;
@@ -77,4 +103,51 @@ export interface Expense {
   }>;
   split: { mode: "AUTO_WEIGHTED" | "MANUAL"; shares: ExpenseShare[] };
   audit: { createdByMembershipId: string; createdAt: Date; updatedAt: Date };
+}
+
+export interface CommonArea {
+  id: string;
+  householdId: string;
+  name: string;
+  normalizedName: string;
+  status: "ACTIVE";
+  createdByMembershipId: string;
+  createdAt: Date;
+}
+
+export interface ChoreTask {
+  id: string;
+  householdId: string;
+  commonAreaId: string;
+  name: string;
+  normalizedName: string;
+  priority: number;
+  assigneeLimit: number;
+  status: "ACTIVE";
+  createdByMembershipId: string;
+  createdAt: Date;
+}
+
+export interface ChoreWeek {
+  id: string;
+  householdId: string;
+  weekStart: Date;
+  weekEnd: Date;
+  createdByMembershipId: string;
+  createdAt: Date;
+}
+
+export interface ChoreAssignment {
+  id: string;
+  householdId: string;
+  weekId: string;
+  weekStart: Date;
+  weekEnd: Date;
+  commonAreaId: string;
+  taskId: string;
+  membershipId: string;
+  status: ChoreAssignmentStatus;
+  markedByMembershipId?: string;
+  markedAt?: Date;
+  createdAt: Date;
 }

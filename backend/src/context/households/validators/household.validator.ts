@@ -6,8 +6,14 @@ export const createHouseholdSchema = z
   .object({
     name: text,
     currency: z.literal("CLP"),
-    createdByUserId: text,
+    createdByUserId: text.optional(),
     governanceSettings: z.object({ categoryParticipationApprovalMode: z.literal("ADMIN_ONLY") }).optional(),
+  })
+  .strict();
+
+export const joinHouseholdSchema = z
+  .object({
+    inviteCode: text,
   })
   .strict();
 

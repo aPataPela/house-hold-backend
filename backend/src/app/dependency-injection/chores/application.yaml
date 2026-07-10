@@ -1,0 +1,40 @@
+services:
+  Service.Chore:
+    class: ../../../context/chores/services/chore.service
+    main: ChoreService
+    arguments: ["@App.Now"]
+
+  Controller.Chore.CreateCommonArea:
+    class: ../../controllers/chores/create/CreateCommonAreaController
+    main: CreateCommonAreaController
+    arguments: ["@Service.Chore"]
+
+  Controller.Chore.CreateTask:
+    class: ../../controllers/chores/create/CreateChoreTaskController
+    main: CreateChoreTaskController
+    arguments: ["@Service.Chore"]
+
+  Controller.Chore.GenerateWeek:
+    class: ../../controllers/chores/create/GenerateChoreWeekController
+    main: GenerateChoreWeekController
+    arguments: ["@Service.Chore"]
+
+  Controller.Chore.ListTasks:
+    class: ../../controllers/chores/find/ListChoreTasksController
+    main: ListChoreTasksController
+    arguments: ["@Service.Chore"]
+
+  Controller.Chore.ListCommonAreas:
+    class: ../../controllers/chores/find/ListCommonAreasController
+    main: ListCommonAreasController
+    arguments: ["@Service.Chore"]
+
+  Controller.Chore.GetWeek:
+    class: ../../controllers/chores/find/GetChoreWeekController
+    main: GetChoreWeekController
+    arguments: ["@Service.Chore"]
+
+  Controller.Chore.MarkAssignment:
+    class: ../../controllers/chores/update/MarkChoreAssignmentController
+    main: MarkChoreAssignmentController
+    arguments: ["@Service.Chore"]

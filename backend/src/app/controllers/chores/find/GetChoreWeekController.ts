@@ -1,0 +1,17 @@
+import type { NextFunction, Request, Response } from "express";
+import type { BaseController } from "@app/controllers/BaseController";
+import type { ChoreService } from "@context/chores/services/chore.service";
+import { choreWeekResponse } from "@context/shared/http/serialize";
+
+export class GetChoreWeekController implements BaseController {
+  constructor(private readonly service: ChoreService) {}
+
+  async run(req: Request, res: Response, next: NextFunction): Promise<void> {
+    void next;
+    const result = await this.service.getWeek(
+      req.params.householdId as string,
+      req.params.weekStart as string,
+    );
+    res.json(choreWeekResponse(result));
+  }
+}

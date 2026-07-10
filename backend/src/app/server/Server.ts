@@ -1,4 +1,5 @@
 import express, { Router } from "express";
+import cors from "cors";
 import helmet from "helmet";
 import type { Server as HttpServer } from "node:http";
 import container from "@app/dependency-injection";
@@ -22,6 +23,7 @@ export class Server {
   ) {
     this.logger = container.get("Shared.Logger");
     this.app.disable("x-powered-by");
+    this.app.use(cors({ origin: true }));
     this.app.use(express.json({ limit: "1mb" }));
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(helmet.xssFilter());

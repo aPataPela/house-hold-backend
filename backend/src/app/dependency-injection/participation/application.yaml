@@ -9,6 +9,11 @@ services:
     main: SetPreferenceController
     arguments: ["@Service.Participation"]
 
+  Controller.Participation.ListRules:
+    class: ../../controllers/participation/find/ListParticipationRulesController
+    main: ListParticipationRulesController
+    arguments: ["@Service.Participation"]
+
   Controller.Participation.CreateExclusion:
     class: ../../controllers/participation/create/CreateCategoryExclusionController
     main: CreateCategoryExclusionController

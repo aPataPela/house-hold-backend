@@ -2,11 +2,14 @@ import type { NextFunction, Request, Response, Router } from "express";
 import container from "@app/dependency-injection";
 import { CreateCategoryExclusionController } from "@app/controllers/participation/create/CreateCategoryExclusionController";
 import { CancelCategoryExclusionController } from "@app/controllers/participation/create/CancelCategoryExclusionController";
+import { ListParticipationRulesController } from "@app/controllers/participation/find/ListParticipationRulesController";
 import { SetPreferenceController } from "@app/controllers/participation/update/SetPreferenceController";
-import { validateBody } from "@app/http/middlewares/validate.middleware";
+import { requireAuth } from "@app/http/middlewares/require-auth.middleware";
+import { validateBody, validateQuery } from "@app/http/middlewares/validate.middleware";
 import {
   cancelExclusionSchema,
   createExclusionSchema,
+  listParticipationRulesQuerySchema,
   setPreferenceSchema,
 } from "@context/participation/validators/participation.validator";
 
@@ -19,6 +22,18 @@ export const register = (router: Router): void => {
   );
   const cancelExclusionController: CancelCategoryExclusionController = container.get(
     "Controller.Participation.CancelExclusion",
+  );
+  const listRulesController: ListParticipationRulesController = container.get(
+    "Controller.Participation.ListRules",
+  );
+
+  router.get(
+    "/api/v1/households/:householdId/participation-rules",
+    requireAuth,
+    validateQuery(listParticipationRulesQuerySchema),
+    (req: Request, res: Response, next: NextFunction) => {
+      return listRulesController.run(req, res, next);
+    },
   );
 
   router.put(

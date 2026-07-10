@@ -1,0 +1,30 @@
+services:
+  Service.Auth:
+    class: ../../../context/users/services/auth.service
+    main: AuthService
+    arguments: ["@App.Now"]
+
+  Controller.Auth.Register:
+    class: ../../controllers/auth/RegisterController
+    main: RegisterController
+    arguments: ["@Service.Auth"]
+
+  Controller.Auth.Login:
+    class: ../../controllers/auth/LoginController
+    main: LoginController
+    arguments: ["@Service.Auth"]
+
+  Controller.Auth.Refresh:
+    class: ../../controllers/auth/RefreshController
+    main: RefreshController
+    arguments: ["@Service.Auth"]
+
+  Controller.Auth.Logout:
+    class: ../../controllers/auth/LogoutController
+    main: LogoutController
+    arguments: ["@Service.Auth"]
+
+  Controller.Me.Get:
+    class: ../../controllers/me/GetMeController
+    main: GetMeController
+    arguments: ["@Service.Auth"]

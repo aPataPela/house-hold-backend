@@ -8,6 +8,7 @@ const householdSchema = new Schema(
     name: String,
     currency: String,
     approvalMode: String,
+    inviteCode: { type: String, unique: true, sparse: true, index: true },
     createdAt: Date,
   },
   { versionKey: false },

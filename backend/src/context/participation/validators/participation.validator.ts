@@ -5,7 +5,13 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const setPreferenceSchema = z
   .object({
-    mode: z.enum(["INCLUDE_DEFAULT", "EXCLUDE_DEFAULT"]),
+    mode: z.enum([
+      "PARTICIPATES",
+      "HALF",
+      "NO_PARTICIPATES",
+      "INCLUDE_DEFAULT",
+      "EXCLUDE_DEFAULT",
+    ]),
     weight: z.number().positive().optional(),
     validFrom: date,
     validTo: date.nullable().optional(),
@@ -27,5 +33,11 @@ export const createExclusionSchema = z
 export const cancelExclusionSchema = z
   .object({
     cancelledByMembershipId: text,
+  })
+  .strict();
+
+export const listParticipationRulesQuerySchema = z
+  .object({
+    on: date,
   })
   .strict();

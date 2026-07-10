@@ -23,6 +23,7 @@ Estado: implementada el 2026-06-18. Reorganizada el 2026-07-02.
   - `households`: households, memberships y categories.
   - `participation`: preferencias y exclusiones autoservicio.
   - `expenses`: gastos, listado y balance.
+  - `chores`: espacios comunes, tareas domésticas y asignaciones semanales.
   - `shared`: tipos, errores, serialización HTTP y utilidades comunes.
 
 Cada contexto sigue la estructura tradicional de Express:
@@ -42,4 +43,16 @@ Cuando existan nuevos dominios funcionales, por ejemplo `users` o `payments`, se
 - Los shares son snapshots históricos y siempre suman el total.
 - El cursor de gastos es opaco y contiene `date + id`.
 - Crear household y ADMIN inicial usa una transacción.
+- Las tareas domésticas rotan semanalmente por historial de asignación y prioridad.
 - Autenticación y JWT quedan fuera de V1.
+
+## Contrato de despliegue
+
+El frontend y la API pueden desplegarse juntos o por separado. La app queda documentada para funcionar con este contrato:
+
+- En desarrollo, Next.js atiende el frontend en `3000` y proxya `/api` al backend local en `4000` por defecto.
+- `allowedDevOrigins` sólo existe para permitir HMR desde IPs LAN durante desarrollo.
+- En producción, el backend puede vivir detrás de `API_PROXY_TARGET` o en un origen distinto consumido por `NEXT_PUBLIC_API_BASE_URL`.
+- El service worker se registra sólo en producción; en desarrollo se desregistran instalaciones previas para evitar caché vieja al probar la app.
+
+Cuando se cambie la topología de red o el hosting, este contrato debe revisarse antes del despliegue.

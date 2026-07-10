@@ -63,6 +63,219 @@ describe("HTTP foundation", () => {
   });
 });
 
+describe("Auth and household onboarding", () => {
+  const registerUser = async (input: { name: string; email: string; password?: string }) => {
+    const response = await request(app)
+      .post("/api/v1/auth/register")
+      .send({ password: "super-secret", ...input })
+      .expect(201);
+    return response.body as {
+      user: { userId: string; email: string };
+      accessToken: string;
+      refreshToken: string;
+    };
+  };
+
+  it("registers users, rejects duplicate email and validates login", async () => {
+    const registered = await registerUser({ name: "Claudia", email: "CLAUDIA@mail.com" });
+    expect(registered.user.email).toBe("claudia@mail.com");
+    expect(registered.accessToken).toBeTypeOf("string");
+    expect(registered.refreshToken).toBeTypeOf("string");
+
+    await request(app)
+      .post("/api/v1/auth/register")
+      .send({ name: "Otra", email: "claudia@mail.com", password: "super-secret" })
+      .expect(409);
+
+    await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: "claudia@mail.com", password: "wrong" })
+      .expect(400);
+
+    const login = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: "claudia@mail.com", password: "super-secret" })
+      .expect(200);
+    expect(login.body.user.userId).toBe(registered.user.userId);
+    expect(login.body.memberships).toEqual([]);
+  });
+
+  it("rotates refresh tokens and rejects revoked refresh tokens", async () => {
+    const registered = await registerUser({ name: "Claudia", email: "claudia@mail.com" });
+    const refreshed = await request(app)
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken: registered.refreshToken })
+      .expect(200);
+    expect(refreshed.body.refreshToken).not.toBe(registered.refreshToken);
+
+    await request(app)
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken: registered.refreshToken })
+      .expect(403);
+
+    await request(app)
+      .post("/api/v1/auth/logout")
+      .send({ refreshToken: refreshed.body.refreshToken })
+      .expect(204);
+    await request(app)
+      .post("/api/v1/auth/refresh")
+      .send({ refreshToken: refreshed.body.refreshToken })
+      .expect(403);
+  });
+
+  it("creates households with ADMIN membership and lets users join by invite code", async () => {
+    const admin = await registerUser({ name: "Admin", email: "admin@mail.com" });
+    const created = await request(app)
+      .post("/api/v1/households")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ name: "Casa Ñuñoa", currency: "CLP" })
+      .expect(201);
+    expect(created.body.creatorMembershipId).toBeTypeOf("string");
+    expect(created.body.inviteCode).toMatch(/^[A-Z2-9]{6}$/);
+
+    const member = await registerUser({ name: "Member", email: "member@mail.com" });
+    const joined = await request(app)
+      .post("/api/v1/households/join")
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .send({ inviteCode: created.body.inviteCode })
+      .expect(201);
+    expect(joined.body.membership.role).toBe("MEMBER");
+    expect(joined.body.membership.householdId).toBe(created.body.householdId);
+    expect(joined.body.membership.userName).toBe("Member");
+
+    await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/categories`)
+      .send({ name: "Feria", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+    await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/common-areas`)
+      .send({ name: "Cocina", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+
+    const members = await request(app)
+      .get(`/api/v1/households/${created.body.householdId}/memberships`)
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .expect(200);
+    expect(members.body.memberships.map((membership: { userName: string }) => membership.userName)).toEqual([
+      "Admin",
+      "Member",
+    ]);
+
+    await request(app)
+      .get(`/api/v1/households/${created.body.householdId}/categories`)
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.categories[0].name).toBe("Feria");
+      });
+
+    await request(app)
+      .get(`/api/v1/households/${created.body.householdId}/common-areas`)
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.areas[0].name).toBe("Cocina");
+      });
+
+    await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/categories`)
+      .send({ name: "Gas", createdByMembershipId: joined.body.membership.membershipId })
+      .expect(403);
+
+    await request(app)
+      .post("/api/v1/households/join")
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .send({ inviteCode: created.body.inviteCode })
+      .expect(409);
+
+    const me = await request(app)
+      .get("/api/v1/me")
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .expect(200);
+    expect(me.body.memberships).toHaveLength(1);
+    expect(me.body.memberships[0].householdId).toBe(created.body.householdId);
+
+    await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/invite-code/regenerate`)
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .expect(403);
+
+    const regenerated = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/invite-code/regenerate`)
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .expect(200);
+    expect(regenerated.body.inviteCode).toMatch(/^[A-Z2-9]{6}$/);
+    expect(regenerated.body.inviteCode).not.toBe(created.body.inviteCode);
+
+    await request(app)
+      .post("/api/v1/households/join")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ inviteCode: "BAD123" })
+      .expect(404);
+  });
+
+  it("lists current participation rules only for household members", async () => {
+    const admin = await registerUser({ name: "Admin", email: "rules-admin@mail.com" });
+    const created = await request(app)
+      .post("/api/v1/households")
+      .set("Authorization", `Bearer ${admin.accessToken}`)
+      .send({ name: "Casa Reglas", currency: "CLP" })
+      .expect(201);
+    const member = await registerUser({ name: "Member", email: "rules-member@mail.com" });
+    const joined = await request(app)
+      .post("/api/v1/households/join")
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .send({ inviteCode: created.body.inviteCode })
+      .expect(201);
+    const category = await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/categories`)
+      .send({ name: "Feria", createdByMembershipId: created.body.creatorMembershipId })
+      .expect(201);
+
+    const preferenceUrl =
+      `/api/v1/households/${created.body.householdId}/categories/` +
+      `${category.body.categoryId}/preferences/${joined.body.membership.membershipId}`;
+    await request(app)
+      .put(preferenceUrl)
+      .send({
+        mode: "HALF",
+        validFrom: "2025-12-01",
+        validTo: null,
+        changedByMembershipId: created.body.creatorMembershipId,
+      })
+      .expect(200);
+    await request(app)
+      .post(`/api/v1/households/${created.body.householdId}/category-exclusions`)
+      .send({
+        membershipId: joined.body.membership.membershipId,
+        categoryId: category.body.categoryId,
+        periodStart: "2025-12-15",
+        periodEnd: "2026-01-15",
+        reason: "Viaje",
+        createdByMembershipId: joined.body.membership.membershipId,
+      })
+      .expect(201);
+
+    const rulesUrl =
+      `/api/v1/households/${created.body.householdId}/participation-rules?on=2025-12-20`;
+    await request(app).get(rulesUrl).expect(403);
+    const rules = await request(app)
+      .get(rulesUrl)
+      .set("Authorization", `Bearer ${member.accessToken}`)
+      .expect(200);
+    expect(rules.body.preferences).toHaveLength(1);
+    expect(rules.body.preferences[0].mode).toBe("HALF");
+    expect(rules.body.preferences[0].weight).toBe(0.5);
+    expect(rules.body.exclusions).toHaveLength(1);
+
+    const outsider = await registerUser({ name: "Outsider", email: "rules-outsider@mail.com" });
+    await request(app)
+      .get(rulesUrl)
+      .set("Authorization", `Bearer ${outsider.accessToken}`)
+      .expect(403);
+  });
+});
+
 describe("V1 flow", () => {
   it("creates base resources and protects ADMIN operations", async () => {
     const setup = await bootstrap();
@@ -83,9 +296,8 @@ describe("V1 flow", () => {
         `/api/v1/households/${setup.householdId}/categories/${setup.categoryId}/preferences/${setup.memberId}`,
       )
       .send({
-        mode: "INCLUDE_DEFAULT",
-        weight: 0.5,
-        validFrom: "2026-01-01",
+        mode: "HALF",
+        validFrom: "2025-12-01",
         validTo: null,
         changedByMembershipId: setup.adminId,
       })
@@ -95,8 +307,8 @@ describe("V1 flow", () => {
       .send({
         membershipId: setup.memberId,
         categoryId: setup.categoryId,
-        periodStart: "2026-03-01",
-        periodEnd: "2026-04-01",
+        periodStart: "2025-12-01",
+        periodEnd: "2025-12-31",
         reason: "Viaje",
         createdByMembershipId: setup.memberId,
       })
@@ -108,7 +320,7 @@ describe("V1 flow", () => {
         categoryId: setup.categoryId,
         payerMembershipId: setup.adminId,
         actorMembershipId: setup.adminId,
-        date: "2026-02-10",
+        date: "2025-11-30",
         totalAmount: 47000,
         split: { mode: "AUTO_WEIGHTED" },
       })
@@ -127,7 +339,7 @@ describe("V1 flow", () => {
         categoryId: setup.categoryId,
         payerMembershipId: setup.adminId,
         actorMembershipId: setup.adminId,
-        date: "2026-03-10",
+        date: "2025-12-20",
         totalAmount: 50000,
         split: { mode: "AUTO_WEIGHTED" },
       })
@@ -135,18 +347,18 @@ describe("V1 flow", () => {
     expect(excluded.body.split.shares).toHaveLength(1);
     expect(excluded.body.split.shares[0].membershipId).toBe(setup.adminId);
     const list = await request(app)
-      .get(`/api/v1/households/${setup.householdId}/expenses?from=2026-02-01&to=2026-04-01&limit=1`)
+      .get(`/api/v1/households/${setup.householdId}/expenses?from=2025-11-01&to=2026-01-01&limit=1`)
       .expect(200);
     expect(list.body.expenses).toHaveLength(1);
     expect(list.body.page.nextCursor).toBeTypeOf("string");
     const secondPage = await request(app)
       .get(
-        `/api/v1/households/${setup.householdId}/expenses?from=2026-02-01&to=2026-04-01&limit=1&cursor=${list.body.page.nextCursor}`,
+        `/api/v1/households/${setup.householdId}/expenses?from=2025-11-01&to=2026-01-01&limit=1&cursor=${list.body.page.nextCursor}`,
       )
       .expect(200);
     expect(secondPage.body.expenses).toHaveLength(1);
     const balance = await request(app)
-      .get(`/api/v1/households/${setup.householdId}/balance?from=2026-02-01&to=2026-04-01`)
+      .get(`/api/v1/households/${setup.householdId}/balance?from=2025-11-01&to=2026-01-01`)
       .expect(200);
     expect(
       balance.body.members.reduce((sum: number, row: { netBalance: number }) => sum + row.netBalance, 0),
@@ -160,8 +372,8 @@ describe("V1 flow", () => {
       .send({
         membershipId: setup.memberId,
         categoryId: setup.categoryId,
-        periodStart: "2026-04-01",
-        periodEnd: "2026-04-01",
+        periodStart: "2025-12-31",
+        periodEnd: "2025-12-31",
         createdByMembershipId: setup.memberId,
       });
     expect(invalidPeriod.status).toBe(400);
@@ -172,8 +384,8 @@ describe("V1 flow", () => {
       .send({
         membershipId: setup.adminId,
         categoryId: setup.categoryId,
-        periodStart: "2026-03-01",
-        periodEnd: "2026-04-01",
+        periodStart: "2025-12-01",
+        periodEnd: "2025-12-31",
         createdByMembershipId: setup.memberId,
       })
       .expect(403);
@@ -183,8 +395,8 @@ describe("V1 flow", () => {
       .send({
         membershipId: setup.memberId,
         categoryId: setup.categoryId,
-        periodStart: "2026-03-01",
-        periodEnd: "2026-04-01",
+        periodStart: "2025-12-01",
+        periodEnd: "2025-12-31",
         reason: "Viaje",
         createdByMembershipId: setup.adminId,
       })
@@ -198,8 +410,8 @@ describe("V1 flow", () => {
       .send({
         membershipId: setup.memberId,
         categoryId: setup.categoryId,
-        periodStart: "2026-03-15",
-        periodEnd: "2026-04-15",
+        periodStart: "2025-12-15",
+        periodEnd: "2026-01-10",
         createdByMembershipId: setup.adminId,
       });
     expect(overlapping.status).toBe(400);
@@ -217,8 +429,8 @@ describe("V1 flow", () => {
       .send({
         membershipId: setup.adminId,
         categoryId: setup.categoryId,
-        periodStart: "2026-03-01",
-        periodEnd: "2026-04-01",
+        periodStart: "2025-12-20",
+        periodEnd: "2026-01-10",
         createdByMembershipId: setup.adminId,
       })
       .expect(201);
@@ -235,8 +447,8 @@ describe("V1 flow", () => {
       .send({
         membershipId: setup.memberId,
         categoryId: setup.categoryId,
-        periodStart: "2026-04-01",
-        periodEnd: "2026-05-01",
+        periodStart: "2025-12-20",
+        periodEnd: "2026-01-20",
         createdByMembershipId: setup.adminId,
       })
       .expect(201);
@@ -260,8 +472,8 @@ describe("V1 flow", () => {
       .send({
         membershipId: setup.memberId,
         categoryId: setup.categoryId,
-        periodStart: "2026-03-01",
-        periodEnd: "2026-04-01",
+        periodStart: "2025-12-01",
+        periodEnd: "2025-12-31",
         createdByMembershipId: setup.memberId,
       })
       .expect(201);
@@ -272,7 +484,7 @@ describe("V1 flow", () => {
         categoryId: setup.categoryId,
         payerMembershipId: setup.adminId,
         actorMembershipId: setup.adminId,
-        date: "2026-03-10",
+        date: "2025-12-10",
         totalAmount: 50000,
         split: { mode: "AUTO_WEIGHTED" },
       })
@@ -294,7 +506,7 @@ describe("V1 flow", () => {
         categoryId: setup.categoryId,
         payerMembershipId: setup.adminId,
         actorMembershipId: setup.adminId,
-        date: "2026-03-11",
+        date: "2025-12-11",
         totalAmount: 50000,
         split: { mode: "AUTO_WEIGHTED" },
       })
@@ -302,7 +514,7 @@ describe("V1 flow", () => {
     expect(postCancelExpense.body.split.shares).toHaveLength(2);
 
     const list = await request(app)
-      .get(`/api/v1/households/${setup.householdId}/expenses?from=2026-03-01&to=2026-03-12`)
+      .get(`/api/v1/households/${setup.householdId}/expenses?from=2025-12-01&to=2025-12-12`)
       .expect(200);
     const persistedExcludedExpense = list.body.expenses.find(
       (expense: { expenseId: string }) => expense.expenseId === excludedExpense.body.expenseId,
@@ -329,11 +541,176 @@ describe("V1 flow", () => {
         categoryId: setup.categoryId,
         payerMembershipId: setup.adminId,
         actorMembershipId: setup.adminId,
-        date: "2026-02-10",
+        date: "2025-12-10",
         totalAmount: 100,
         split: { mode: "MANUAL", shares: [{ membershipId: setup.adminId, assignedAmount: 90 }] },
       });
     expect(invalidTotal.status).toBe(400);
     expect(invalidTotal.body.error.code).toBe("INVALID_SHARES_TOTAL");
+  });
+});
+
+describe("Household chores", () => {
+  const inviteMember = async (householdId: string, adminId: string, userId: string) => {
+    const response = await request(app)
+      .post(`/api/v1/households/${householdId}/memberships`)
+      .send({ userId, role: "MEMBER", invitedByMembershipId: adminId })
+      .expect(201);
+    return response.body.membershipId as string;
+  };
+
+  const createArea = async (householdId: string, adminId: string, name: string) => {
+    const response = await request(app)
+      .post(`/api/v1/households/${householdId}/common-areas`)
+      .send({ name, createdByMembershipId: adminId })
+      .expect(201);
+    return response.body.commonAreaId as string;
+  };
+
+  const createTask = async (
+    householdId: string,
+    adminId: string,
+    commonAreaId: string,
+    input: { name: string; priority: number; assigneeLimit: number },
+  ) => {
+    const response = await request(app)
+      .post(`/api/v1/households/${householdId}/chores/tasks`)
+      .send({ ...input, commonAreaId, createdByMembershipId: adminId })
+      .expect(201);
+    return response.body.choreTaskId as string;
+  };
+
+  it("allows only ADMIN members to configure common areas and chores", async () => {
+    const setup = await bootstrap();
+    await request(app)
+      .post(`/api/v1/households/${setup.householdId}/common-areas`)
+      .send({ name: "Cocina", createdByMembershipId: setup.memberId })
+      .expect(403);
+
+    const commonAreaId = await createArea(setup.householdId, setup.adminId, "Cocina");
+    await createTask(setup.householdId, setup.adminId, commonAreaId, {
+      name: "Limpiar cocina",
+      priority: 1,
+      assigneeLimit: 2,
+    });
+
+    const tasks = await request(app).get(`/api/v1/households/${setup.householdId}/chores/tasks`).expect(200);
+    expect(tasks.body.tasks).toHaveLength(1);
+    expect(tasks.body.tasks[0].commonArea.name).toBe("Cocina");
+  });
+
+  it("prioritizes important chores when members cannot cover every task", async () => {
+    const setup = await bootstrap();
+    const bathroom = await createArea(setup.householdId, setup.adminId, "Baño");
+    const kitchen = await createArea(setup.householdId, setup.adminId, "Cocina");
+    const patio = await createArea(setup.householdId, setup.adminId, "Patio");
+    await createTask(setup.householdId, setup.adminId, bathroom, {
+      name: "Mantener baño",
+      priority: 1,
+      assigneeLimit: 1,
+    });
+    await createTask(setup.householdId, setup.adminId, kitchen, {
+      name: "Limpiar cocina",
+      priority: 2,
+      assigneeLimit: 1,
+    });
+    await createTask(setup.householdId, setup.adminId, patio, {
+      name: "Barrer patio",
+      priority: 3,
+      assigneeLimit: 1,
+    });
+
+    const week = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/chores/weeks`)
+      .send({ weekStart: "2026-01-05", createdByMembershipId: setup.adminId })
+      .expect(201);
+
+    expect(week.body.tasks.map((task: { name: string }) => task.name)).toEqual([
+      "Mantener baño",
+      "Limpiar cocina",
+    ]);
+  });
+
+  it("uses extra chore capacity and requires every assigned member to mark DONE", async () => {
+    const setup = await bootstrap();
+    await inviteMember(setup.householdId, setup.adminId, "usr_3");
+    await inviteMember(setup.householdId, setup.adminId, "usr_4");
+    const bathroom = await createArea(setup.householdId, setup.adminId, "Baño");
+    const patio = await createArea(setup.householdId, setup.adminId, "Patio");
+    await createTask(setup.householdId, setup.adminId, bathroom, {
+      name: "Mantener baño",
+      priority: 1,
+      assigneeLimit: 3,
+    });
+    await createTask(setup.householdId, setup.adminId, patio, {
+      name: "Barrer patio",
+      priority: 2,
+      assigneeLimit: 1,
+    });
+
+    const week = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/chores/weeks`)
+      .send({ weekStart: "2026-01-05", createdByMembershipId: setup.adminId })
+      .expect(201);
+    const bathroomTask = week.body.tasks.find((task: { name: string }) => task.name === "Mantener baño");
+    expect(bathroomTask.assignments).toHaveLength(3);
+
+    for (const assignment of bathroomTask.assignments.slice(0, 2) as Array<{
+      assignmentId: string;
+      membershipId: string;
+    }>) {
+      await request(app)
+        .patch(`/api/v1/households/${setup.householdId}/chores/assignments/${assignment.assignmentId}`)
+        .send({ status: "DONE", markedByMembershipId: assignment.membershipId })
+        .expect(200);
+    }
+    const partial = await request(app)
+      .get(`/api/v1/households/${setup.householdId}/chores/weeks/2026-01-05`)
+      .expect(200);
+    expect(
+      partial.body.tasks.find((task: { name: string }) => task.name === "Mantener baño").weeklyStatus,
+    ).toBe("PENDING");
+
+    const last = bathroomTask.assignments[2] as { assignmentId: string; membershipId: string };
+    await request(app)
+      .patch(`/api/v1/households/${setup.householdId}/chores/assignments/${last.assignmentId}`)
+      .send({ status: "DONE", markedByMembershipId: last.membershipId })
+      .expect(200);
+
+    const completed = await request(app)
+      .get(`/api/v1/households/${setup.householdId}/chores/weeks/2026-01-05`)
+      .expect(200);
+    expect(
+      completed.body.tasks.find((task: { name: string }) => task.name === "Mantener baño").weeklyStatus,
+    ).toBe("DONE");
+  });
+
+  it("generates weeks idempotently and rotates repeated chore assignments", async () => {
+    const setup = await bootstrap();
+    const bathroom = await createArea(setup.householdId, setup.adminId, "Baño");
+    await createTask(setup.householdId, setup.adminId, bathroom, {
+      name: "Mantener baño",
+      priority: 1,
+      assigneeLimit: 1,
+    });
+
+    const firstWeek = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/chores/weeks`)
+      .send({ weekStart: "2026-01-05", createdByMembershipId: setup.adminId })
+      .expect(201);
+    const secondWeek = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/chores/weeks`)
+      .send({ weekStart: "2026-01-12", createdByMembershipId: setup.adminId })
+      .expect(201);
+    const repeatedSecondWeek = await request(app)
+      .post(`/api/v1/households/${setup.householdId}/chores/weeks`)
+      .send({ weekStart: "2026-01-12", createdByMembershipId: setup.adminId })
+      .expect(201);
+
+    const firstMember = firstWeek.body.tasks[0].assignments[0].membershipId;
+    const secondMember = secondWeek.body.tasks[0].assignments[0].membershipId;
+    expect(secondMember).not.toBe(firstMember);
+    expect(repeatedSecondWeek.body.choreWeekId).toBe(secondWeek.body.choreWeekId);
+    expect(repeatedSecondWeek.body.tasks[0].assignments).toHaveLength(1);
   });
 });

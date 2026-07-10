@@ -14,7 +14,27 @@ services:
     main: InviteMemberController
     arguments: ["@Service.Household"]
 
+  Controller.Household.Join:
+    class: ../../controllers/households/create/JoinHouseholdController
+    main: JoinHouseholdController
+    arguments: ["@Service.Household"]
+
+  Controller.Household.RegenerateInviteCode:
+    class: ../../controllers/households/update/RegenerateInviteCodeController
+    main: RegenerateInviteCodeController
+    arguments: ["@Service.Household"]
+
   Controller.Household.CreateCategory:
     class: ../../controllers/households/create/CreateCategoryController
     main: CreateCategoryController
+    arguments: ["@Service.Household"]
+
+  Controller.Household.ListMembers:
+    class: ../../controllers/households/find/ListMembersController
+    main: ListMembersController
+    arguments: ["@Service.Household"]
+
+  Controller.Household.ListCategories:
+    class: ../../controllers/households/find/ListCategoriesController
+    main: ListCategoriesController
     arguments: ["@Service.Household"]

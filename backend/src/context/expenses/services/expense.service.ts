@@ -2,20 +2,23 @@ import { randomUUID } from "node:crypto";
 import type { Expense, ExpenseShare } from "../../shared/types/entities";
 import { badRequest, notFound } from "../../shared/errors/app-error";
 import { decodeExpenseCursor, encodeExpenseCursor } from "../../shared/utils/cursor";
-import { parseDate } from "../../shared/utils/date";
-import { calculateWeightedSplit } from "../../shared/utils/weighted-split";
+import { parseDate, toDateString } from "../../shared/utils/date";
 import { CategoryModel } from "../../households/models/category.model";
 import { HouseholdModel } from "../../households/models/household.model";
 import { MembershipModel } from "../../households/models/membership.model";
 import { CategoryExclusionModel } from "../../participation/models/category-exclusion.model";
 import { PreferenceModel } from "../../participation/models/preference.model";
+import { ParticipationPolicyEngine } from "../../participation/services/participation-policy-engine";
 import { ExpenseModel } from "../models/expense.model";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
 
 export class ExpenseService {
-  constructor(private readonly now = () => new Date()) {}
+  constructor(
+    private readonly now = () => new Date(),
+    private readonly policyEngine = new ParticipationPolicyEngine(),
+  ) {}
 
   async register(
     householdId: string,
@@ -39,11 +42,20 @@ export class ExpenseService {
     if (!Number.isInteger(input.totalAmount) || input.totalAmount <= 0) {
       throw badRequest("INVALID_AMOUNT", "totalAmount must be a positive CLP integer");
     }
-    const members = await this.listActiveMemberships(householdId, date);
-    const memberIds = new Set(members.map((member) => member.id));
-    if (!memberIds.has(input.payerMembershipId) || !memberIds.has(input.actorMembershipId)) {
-      throw badRequest("INACTIVE_MEMBERSHIP", "payer and actor must be active on expense date");
+    const today = parseDate(toDateString(this.now()), "today");
+    if (date > today) {
+      throw badRequest("INVALID_DATE", "date cannot be in the future");
     }
+    const payer = await this.findActiveMembership(householdId, input.payerMembershipId);
+    if (!payer) {
+      throw badRequest("INACTIVE_PAYER", "payer must be an active member");
+    }
+    const actor = await this.findActiveMembership(householdId, input.actorMembershipId);
+    if (!actor) {
+      throw badRequest("INACTIVE_ACTOR", "actor must be an active member");
+    }
+    const members = await this.listExpenseParticipants(householdId, date);
+    const memberIds = new Set(members.map((member) => member.id));
 
     let shares: ExpenseShare[];
     if (input.split.mode === "MANUAL") {
@@ -68,23 +80,12 @@ export class ExpenseService {
         throw badRequest("INVALID_SHARES_TOTAL", "manual shares must sum totalAmount");
       }
     } else {
-      const preferences = await this.listPreferences(householdId, input.categoryId, date);
-      const exclusions = new Set(
-        (await this.listActiveExclusions(householdId, input.categoryId, date)).map(
-          (item) => item.membershipId,
-        ),
-      );
-      const byMember = new Map(preferences.map((item) => [item.membershipId, item]));
-      const participants = members.flatMap((member) => {
-        const preference = byMember.get(member.id);
-        if (exclusions.has(member.id) || preference?.mode === "EXCLUDE_DEFAULT") return [];
-        return [{ membershipId: member.id, weight: preference?.weight ?? 1 }];
+      shares = this.policyEngine.calculateSplit(input.totalAmount, {
+        members,
+        preferences: await this.listPreferences(householdId, input.categoryId, date),
+        exclusions: await this.listActiveExclusions(householdId, input.categoryId, date),
+        date,
       });
-      shares = calculateWeightedSplit(input.totalAmount, participants).map((share) => ({
-        membershipId: share.membershipId,
-        assignedAmount: share.assignedAmount,
-        weightUsed: share.weight,
-      }));
     }
 
     const now = this.now();
@@ -170,6 +171,12 @@ export class ExpenseService {
     };
   }
 
+  private async listExpenseParticipants(householdId: string, date: Date) {
+    const members = await this.listActiveMemberships(householdId, date);
+    if (members.length > 0) return members;
+    return this.listActiveMemberships(householdId, this.now());
+  }
+
   private async listActiveMemberships(householdId: string, date: Date) {
     return plain<Array<{ id: string }>>(
       await MembershipModel.find({
@@ -179,13 +186,36 @@ export class ExpenseService {
         $or: [{ leftAt: null }, { leftAt: { $gt: date } }, { leftAt: { $exists: false } }],
       })
         .sort({ _id: 1 })
-        .lean(),
+      .lean(),
+    );
+  }
+
+  private async findActiveMembership(householdId: string, membershipId: string, date = this.now()) {
+    return plain<{ id: string } | null>(
+      await MembershipModel.findOne({
+        _id: membershipId,
+        householdId,
+        status: "ACTIVE",
+        joinedAt: { $lte: date },
+        $or: [{ leftAt: null }, { leftAt: { $gt: date } }, { leftAt: { $exists: false } }],
+      }).lean(),
     );
   }
 
   private async listPreferences(householdId: string, categoryId: string, date: Date) {
     return plain<
-      Array<{ membershipId: string; mode: "INCLUDE_DEFAULT" | "EXCLUDE_DEFAULT"; weight: number }>
+      Array<{
+        membershipId: string;
+        mode:
+          | "PARTICIPATES"
+          | "HALF"
+          | "NO_PARTICIPATES"
+          | "INCLUDE_DEFAULT"
+          | "EXCLUDE_DEFAULT";
+        weight: number;
+        validFrom: Date;
+        validTo?: Date | null;
+      }>
     >(
       await PreferenceModel.find({
         householdId,
@@ -197,7 +227,7 @@ export class ExpenseService {
   }
 
   private async listActiveExclusions(householdId: string, categoryId: string, date: Date) {
-    return plain<Array<{ membershipId: string }>>(
+    return plain<Array<{ membershipId: string; periodStart: Date; periodEnd: Date }>>(
       await CategoryExclusionModel.find({
         householdId,
         categoryId,

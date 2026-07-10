@@ -12,6 +12,7 @@ Estado actualizado: 2026-06-18.
 | C        | Registro y reparto de gastos                                | Completada |
 | D        | Listado paginado y balance                                  | Completada |
 | E        | Docker, CI, logging, seguridad y documentación              | Completada |
+| F        | Tareas domésticas semanales rotativas                       | Completada |
 
 ## Criterio de cierre
 
@@ -24,3 +25,4 @@ Una fase solo se considera completada cuando compila, pasa lint y tiene pruebas 
 3. Configurar preferencias y exclusiones temporales autoservicio.
 4. Registrar gastos con snapshot de reparto.
 5. Consultar gastos y balance por periodo.
+6. Configurar espacios comunes/tareas y generar asignaciones semanales rotativas.

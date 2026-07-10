@@ -2,5 +2,7 @@ imports:
   - resource: shared/application.yaml
   - resource: health/application.yaml
   - resource: households/application.yaml
+  - resource: users/application.yaml
   - resource: participation/application.yaml
   - resource: expenses/application.yaml
+  - resource: chores/application.yaml

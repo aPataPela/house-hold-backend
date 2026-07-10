@@ -16,6 +16,8 @@ cp .env.example .env
 npm run dev
 ```
 
+La API escucha en `4000` por defecto para no competir con el frontend Next.js en `3000`.
+
 MongoDB debe ejecutarse como replica set porque la creación de un household y su ADMIN inicial es transaccional. También puede levantarse todo desde la raíz:
 
 ```bash
