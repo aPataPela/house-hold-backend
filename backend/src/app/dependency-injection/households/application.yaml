@@ -2,7 +2,7 @@ services:
   Service.Household:
     class: ../../../context/households/services/household.service
     main: HouseholdService
-    arguments: ["@App.Now", "@Service.Expense"]
+    arguments: ["@App.Now", "@Service.Expense", "@Service.Realtime.Publisher"]
 
   Controller.Household.Create:
     class: ../../controllers/households/create/CreateHouseholdController

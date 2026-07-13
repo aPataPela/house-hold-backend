@@ -2,7 +2,7 @@ services:
   Service.Participation:
     class: ../../../context/participation/services/participation.service
     main: ParticipationService
-    arguments: ["@App.Now"]
+    arguments: ["@App.Now", "@Service.Realtime.Publisher"]
 
   Controller.Participation.SetPreference:
     class: ../../controllers/participation/update/SetPreferenceController

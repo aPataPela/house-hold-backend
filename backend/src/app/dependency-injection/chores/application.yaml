@@ -2,7 +2,7 @@ services:
   Service.Chore:
     class: ../../../context/chores/services/chore.service
     main: ChoreService
-    arguments: ["@App.Now"]
+    arguments: ["@App.Now", "@Service.Realtime.Publisher"]
 
   Controller.Chore.CreateCommonArea:
     class: ../../controllers/chores/create/CreateCommonAreaController

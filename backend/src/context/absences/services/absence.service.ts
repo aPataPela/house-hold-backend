@@ -8,6 +8,11 @@ import { HouseholdModel } from "../../households/models/household.model";
 import { MembershipModel } from "../../households/models/membership.model";
 import { ExpenseModel } from "../../expenses/models/expense.model";
 import { AbsenceModel } from "../models/absence.model";
+import {
+  RealtimeEventType,
+  type JsonValue,
+  type RealtimePublisher,
+} from "@realtime/contracts";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
@@ -16,7 +21,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 type DateRange = { start: Date; end: Date };
 
 export class AbsenceService {
-  constructor(private readonly now = () => new Date()) {}
+  constructor(
+    private readonly now = () => new Date(),
+    private readonly realtimePublisher?: RealtimePublisher,
+  ) {}
 
   async createAbsence(
     householdId: string,
@@ -56,6 +64,13 @@ export class AbsenceService {
       createdAt: this.now(),
     };
     await AbsenceModel.create({ ...absence, _id: absence.id });
+    await this.publishChange(householdId, RealtimeEventType.AbsenceCreated, {
+      absenceId: absence.id,
+      membershipId: absence.membershipId,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      ...(input.reason ? { reason: input.reason.trim() } : {}),
+    } as JsonValue);
     return absence;
   }
 
@@ -80,6 +95,12 @@ export class AbsenceService {
     absence.cancelledByMembershipId = actor.id;
     absence.cancelledAt = this.now();
     await AbsenceModel.replaceOne({ _id: absence.id }, { ...absence, _id: absence.id });
+    await this.publishChange(householdId, RealtimeEventType.AbsenceCancelled, {
+      absenceId: absence.id,
+      membershipId: absence.membershipId,
+      periodStart: absence.periodStart.toISOString(),
+      periodEnd: absence.periodEnd.toISOString(),
+    } as JsonValue);
     return absence;
   }
 
@@ -283,5 +304,17 @@ export class AbsenceService {
     if (actor.id === membershipId) return;
     if (actor.role === "ADMIN") return;
     throw forbidden("only an ADMIN can manage another member absence");
+  }
+
+  private async publishChange(householdId: string, type: string, payload: JsonValue) {
+    if (!this.realtimePublisher) return;
+    await this.realtimePublisher.publish({
+      id: `${type}:${householdId}:${Date.now()}`,
+      type,
+      householdId,
+      occurredAt: this.now().toISOString(),
+      version: 1,
+      payload,
+    });
   }
 }

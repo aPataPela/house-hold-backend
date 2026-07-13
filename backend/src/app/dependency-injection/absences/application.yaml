@@ -2,7 +2,7 @@ services:
   Service.Absence:
     class: ../../../context/absences/services/absence.service
     main: AbsenceService
-    arguments: ["@App.Now"]
+    arguments: ["@App.Now", "@Service.Realtime.Publisher"]
 
   Controller.Absence.Create:
     class: ../../controllers/absences/create/CreateAbsenceController

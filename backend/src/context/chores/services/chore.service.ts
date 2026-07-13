@@ -17,6 +17,11 @@ import { CommonAreaModel } from "../models/common-area.model";
 import { ChoreTaskModel } from "../models/chore-task.model";
 import { ChoreWeekModel } from "../models/chore-week.model";
 import { ChoreAssignmentModel } from "../models/chore-assignment.model";
+import {
+  RealtimeEventType,
+  type JsonValue,
+  type RealtimePublisher,
+} from "@realtime/contracts";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
@@ -33,7 +38,10 @@ export type ChoreWeekTask = ChoreTaskSummary & {
 };
 
 export class ChoreService {
-  constructor(private readonly now = () => new Date()) {}
+  constructor(
+    private readonly now = () => new Date(),
+    private readonly realtimePublisher?: RealtimePublisher,
+  ) {}
 
   async createCommonArea(
     householdId: string,
@@ -54,6 +62,11 @@ export class ChoreService {
       createdAt: this.now(),
     };
     await CommonAreaModel.create({ ...area, _id: area.id });
+    await this.publishChange(householdId, RealtimeEventType.ChoreCommonAreaCreated, {
+      householdId,
+      commonAreaId: area.id,
+      name: area.name,
+    } as JsonValue);
     return area;
   }
 
@@ -93,6 +106,14 @@ export class ChoreService {
       createdAt: this.now(),
     };
     await ChoreTaskModel.create({ ...task, _id: task.id });
+    await this.publishChange(householdId, RealtimeEventType.ChoreTaskCreated, {
+      householdId,
+      choreTaskId: task.id,
+      commonAreaId: task.commonAreaId,
+      name: task.name,
+      priority: task.priority,
+      assigneeLimit: task.assigneeLimit,
+    } as JsonValue);
     return task;
   }
 
@@ -156,6 +177,12 @@ export class ChoreService {
         assignments.map((assignment) => ({ ...assignment, _id: assignment.id })),
       );
     }
+    await this.publishChange(householdId, RealtimeEventType.ChoreWeekGenerated, {
+      householdId,
+      choreWeekId: week.id,
+      weekStart: week.weekStart.toISOString(),
+      weekEnd: week.weekEnd.toISOString(),
+    } as JsonValue);
     return this.getWeekByDocument(week);
   }
 
@@ -197,6 +224,13 @@ export class ChoreService {
         { new: true },
       ).lean(),
     );
+    await this.publishChange(householdId, RealtimeEventType.ChoreAssignmentUpdated, {
+      householdId,
+      assignmentId: updated?.id ?? assignment.id,
+      membershipId: updated?.membershipId ?? assignment.membershipId,
+      status: updated?.status ?? input.status,
+      markedByMembershipId: input.markedByMembershipId,
+    } as JsonValue);
     return updated as ChoreAssignment;
   }
 
@@ -369,5 +403,17 @@ export class ChoreService {
       }).lean(),
     );
     return new Set(absences.map((absence) => absence.membershipId));
+  }
+
+  private async publishChange(householdId: string, type: string, payload: JsonValue) {
+    if (!this.realtimePublisher) return;
+    await this.realtimePublisher.publish({
+      id: `${type}:${householdId}:${Date.now()}`,
+      type,
+      householdId,
+      occurredAt: this.now().toISOString(),
+      version: 1,
+      payload,
+    });
   }
 }

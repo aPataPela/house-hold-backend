@@ -2,7 +2,7 @@ services:
   Service.Expense:
     class: ../../../context/expenses/services/expense.service
     main: ExpenseService
-    arguments: ["@App.Now"]
+    arguments: ["@App.Now", "@Service.Realtime.Publisher"]
 
   Controller.Expense.Register:
     class: ../../controllers/expenses/create/RegisterExpenseController

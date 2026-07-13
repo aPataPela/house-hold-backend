@@ -5,12 +5,20 @@ import { parseDate } from "../../shared/utils/date";
 import { CategoryModel } from "../../households/models/category.model";
 import { MembershipModel } from "../../households/models/membership.model";
 import { PreferenceModel } from "../models/preference.model";
+import {
+  RealtimeEventType,
+  type JsonValue,
+  type RealtimePublisher,
+} from "@realtime/contracts";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
 
 export class ParticipationService {
-  constructor(private readonly now = () => new Date()) {}
+  constructor(
+    private readonly now = () => new Date(),
+    private readonly realtimePublisher?: RealtimePublisher,
+  ) {}
 
   async setPreference(
     householdId: string,
@@ -65,6 +73,14 @@ export class ParticipationService {
         { _id: overlapping.id },
         { ...updated, _id: overlapping.id },
       );
+      await this.publishChange(householdId, RealtimeEventType.ParticipationPreferenceChanged, {
+        preferenceId: updated.id,
+        membershipId,
+        categoryId,
+        mode: input.mode,
+        validFrom: input.validFrom,
+        ...(input.validTo ? { validTo: input.validTo } : {}),
+      } as JsonValue);
       return updated;
     }
     const preference: Preference = {
@@ -78,6 +94,14 @@ export class ParticipationService {
       validTo,
     };
     await PreferenceModel.create({ ...preference, _id: preference.id });
+    await this.publishChange(householdId, RealtimeEventType.ParticipationPreferenceChanged, {
+      preferenceId: preference.id,
+      membershipId,
+      categoryId,
+      mode: input.mode,
+      validFrom: input.validFrom,
+      ...(input.validTo ? { validTo: input.validTo } : {}),
+    } as JsonValue);
     return preference;
   }
 
@@ -155,5 +179,17 @@ export class ParticipationService {
       throw badRequest("INVALID_WEIGHT", "weight must be positive");
     }
     return resolved;
+  }
+
+  private async publishChange(householdId: string, type: string, payload: JsonValue) {
+    if (!this.realtimePublisher) return;
+    await this.realtimePublisher.publish({
+      id: `${type}:${householdId}:${Date.now()}`,
+      type,
+      householdId,
+      occurredAt: this.now().toISOString(),
+      version: 1,
+      payload,
+    });
   }
 }

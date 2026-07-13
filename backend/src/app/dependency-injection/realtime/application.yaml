@@ -1,0 +1,45 @@
+services:
+  Service.Realtime.OutboxStore:
+    class: ../../../realtime/services/mongo-realtime-outbox.store
+    main: MongoRealtimeOutboxStore
+    shared: true
+
+  Service.Realtime.Registry:
+    class: ../../../realtime/services/realtime-subscription-registry
+    main: InMemoryRealtimeSubscriptionRegistry
+    shared: true
+
+  Service.Realtime.DeliveryPolicy:
+    class: ../../../realtime/services/realtime-delivery-policy
+    main: HouseholdRealtimeDeliveryPolicy
+    shared: true
+
+  Service.Realtime.Publisher:
+    class: ../../../realtime/services/realtime-publisher
+    main: OutboxRealtimePublisher
+    arguments: ["@App.Now"]
+    shared: true
+
+  Service.Realtime.Handshake:
+    class: ../../../realtime/services/realtime-handshake.service
+    main: RealtimeHandshakeService
+    arguments: ["@App.Now"]
+    shared: true
+
+  Service.Realtime.Orchestrator:
+    class: ../../../realtime/services/realtime-orchestrator
+    main: RealtimeOutboxOrchestrator
+    arguments: ["@Service.Realtime.DeliveryPolicy", "@Shared.Logger"]
+    shared: true
+
+  Controller.Realtime.CreateSession:
+    class: ../../controllers/realtime/CreateRealtimeSessionController
+    main: CreateRealtimeSessionController
+    arguments: ["@Service.Realtime.Handshake"]
+    shared: true
+
+  Controller.Realtime.Stream:
+    class: ../../controllers/realtime/StreamRealtimeController
+    main: StreamRealtimeController
+    arguments: ["@Service.Realtime.Handshake"]
+    shared: true

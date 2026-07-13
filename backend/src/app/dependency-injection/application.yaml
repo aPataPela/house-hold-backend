@@ -7,3 +7,4 @@ imports:
   - resource: expenses/application.yaml
   - resource: absences/application.yaml
   - resource: chores/application.yaml
+  - resource: realtime/application.yaml

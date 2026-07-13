@@ -9,6 +9,11 @@ import { HouseholdModel } from "../models/household.model";
 import { MembershipModel } from "../models/membership.model";
 import { UserModel } from "../../users/models/user.model";
 import type { ExpenseService } from "../../expenses/services/expense.service";
+import {
+  RealtimeEventType,
+  type JsonValue,
+  type RealtimePublisher,
+} from "@realtime/contracts";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
@@ -18,6 +23,7 @@ export class HouseholdService {
   constructor(
     private readonly now = () => new Date(),
     private readonly expenseService?: ExpenseService,
+    private readonly realtimePublisher?: RealtimePublisher,
   ) {}
 
   async create(input: {
@@ -57,6 +63,12 @@ export class HouseholdService {
     } finally {
       await session.endSession();
     }
+    await this.publishChange(household.id, RealtimeEventType.HouseholdCreated, {
+      householdId: household.id,
+      membershipId: membership.id,
+      creatorMembershipId: membership.id,
+      name: household.name,
+    });
     return { household, membership };
   }
 
@@ -83,6 +95,13 @@ export class HouseholdService {
     await MembershipModel.create({ ...membership, _id: membership.id });
     const user = plain<{ name: string } | null>(await UserModel.findById(input.userId).lean());
     await this.reconcileExpenses(household.id, livingSince);
+    await this.publishChange(household.id, RealtimeEventType.HouseholdMemberJoined, {
+      householdId: household.id,
+      membershipId: membership.id,
+      userId: membership.userId,
+      role: membership.role,
+      livingSince: (membership.livingSince ?? membership.joinedAt).toISOString(),
+    } as JsonValue);
     return { household, membership: { ...membership, ...(user ? { userName: user.name } : {}) } };
   }
 
@@ -99,6 +118,9 @@ export class HouseholdService {
       ).lean(),
     );
     if (!household) throw notFound("household");
+    await this.publishChange(householdId, RealtimeEventType.HouseholdInviteCodeRegenerated, {
+      householdId,
+    });
     return household;
   }
 
@@ -127,6 +149,13 @@ export class HouseholdService {
     };
     await MembershipModel.create({ ...membership, _id: membership.id });
     await this.reconcileExpenses(householdId, livingSince);
+    await this.publishChange(householdId, RealtimeEventType.HouseholdMemberInvited, {
+      householdId,
+      membershipId: membership.id,
+      userId: membership.userId,
+      role: membership.role,
+      livingSince: (membership.livingSince ?? membership.joinedAt).toISOString(),
+    } as JsonValue);
     return membership;
   }
 
@@ -148,6 +177,11 @@ export class HouseholdService {
       createdAt: this.now(),
     };
     await CategoryModel.create({ ...category, _id: category.id });
+    await this.publishChange(householdId, RealtimeEventType.HouseholdCategoryCreated, {
+      householdId,
+      categoryId: category.id,
+      name: category.name,
+    } as JsonValue);
     return category;
   }
 
@@ -223,5 +257,17 @@ export class HouseholdService {
   private async reconcileExpenses(householdId: string, livingSince: Date) {
     if (!this.expenseService) return;
     await this.expenseService.reconcileExpensesAfterLivingSinceChange(householdId, livingSince);
+  }
+
+  private async publishChange(householdId: string, type: string, payload: JsonValue) {
+    if (!this.realtimePublisher) return;
+    await this.realtimePublisher.publish({
+      id: `${type}:${householdId}:${Date.now()}`,
+      type,
+      householdId,
+      occurredAt: this.now().toISOString(),
+      version: 1,
+      payload,
+    });
   }
 }

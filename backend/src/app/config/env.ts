@@ -6,6 +6,7 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   MONGO_URI: z.string().min(1).default("mongodb://localhost:27017/household"),
   LOG_LEVEL: z.string().default("info"),
+  REALTIME_SECRET: z.string().optional(),
 });
 
 export const env = schema.parse(process.env);

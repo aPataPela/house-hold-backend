@@ -11,6 +11,11 @@ import { PreferenceModel } from "../../participation/models/preference.model";
 import { ParticipationPolicyEngine } from "../../participation/services/participation-policy-engine";
 import { ExpensePaymentModel } from "../models/expense-payment.model";
 import { ExpenseModel } from "../models/expense.model";
+import {
+  RealtimeEventType,
+  type JsonValue,
+  type RealtimePublisher,
+} from "@realtime/contracts";
 
 const id = (prefix: string) => `${prefix}_${randomUUID()}`;
 const plain = <T>(doc: unknown): T => doc as T;
@@ -44,6 +49,7 @@ type ExpenseWithSettlement = Expense & {
 export class ExpenseService {
   constructor(
     private readonly now = () => new Date(),
+    private readonly realtimePublisher?: RealtimePublisher,
     private readonly policyEngine = new ParticipationPolicyEngine(),
   ) {}
 
@@ -131,6 +137,14 @@ export class ExpenseService {
     await ExpenseModel.create({ ...expense, _id: expense.id });
     await this.settlePayerShare(expense, input.actorMembershipId);
     const nextSettlement = await this.loadSettlement(expense);
+    await this.publishChange(householdId, RealtimeEventType.ExpenseCreated, {
+      householdId,
+      expenseId: expense.id,
+      categoryId: expense.categoryId,
+      payerMembershipId: expense.payerMembershipId,
+      date: toDateString(expense.date),
+      totalAmount: expense.totalAmount,
+    } as JsonValue);
     return this.attachSettlement(expense, nextSettlement.payments, nextSettlement.shares);
   }
 
@@ -171,6 +185,14 @@ export class ExpenseService {
     };
     await ExpensePaymentModel.create({ ...payment, _id: payment.id });
     const nextSettlement = await this.loadSettlement(expense);
+    await this.publishChange(householdId, RealtimeEventType.ExpensePaymentCreated, {
+      householdId,
+      expenseId: expense.id,
+      paymentId: payment.id,
+      membershipId: payment.membershipId,
+      amount: payment.amount,
+      createdByMembershipId: payment.createdByMembershipId,
+    } as JsonValue);
     return this.attachSettlement(expense, nextSettlement.payments, nextSettlement.shares);
   }
 
@@ -499,6 +521,13 @@ export class ExpenseService {
         },
       );
       await this.reconcileAutoSettlement(expense, shares);
+      await this.publishChange(householdId, RealtimeEventType.ExpenseUpdated, {
+        householdId,
+        expenseId: expense.id,
+        categoryId: expense.categoryId,
+        date: toDateString(expense.date),
+        totalAmount: expense.totalAmount,
+      } as JsonValue);
     }
   }
 
@@ -546,6 +575,18 @@ export class ExpenseService {
       return payments[0]!;
     }
     return null;
+  }
+
+  private async publishChange(householdId: string, type: string, payload: JsonValue) {
+    if (!this.realtimePublisher) return;
+    await this.realtimePublisher.publish({
+      id: `${type}:${householdId}:${Date.now()}`,
+      type,
+      householdId,
+      occurredAt: this.now().toISOString(),
+      version: 1,
+      payload,
+    });
   }
 
   private attachSettlement(
