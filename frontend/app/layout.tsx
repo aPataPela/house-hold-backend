@@ -1,15 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { ThemeProvider } from "@/design-system/theme";
 import { ServiceWorkerRegister } from "./service-worker-register";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Casa Viva",
-  description: "Organiza gastos, saldos y tareas de una casa compartida.",
+  title: "Shared Household",
+  description: "Organiza gastos, ausencias y tareas de una casa compartida.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Casa Viva",
+    title: "Shared Household",
   },
   icons: {
     icon: "/icons/icon.svg",
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#e9eeea",
+  themeColor: "#dfe4ec",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -30,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        {children}
+        <ThemeProvider houseThemeId="patagonia">{children}</ThemeProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

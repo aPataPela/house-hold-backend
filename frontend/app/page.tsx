@@ -742,11 +742,16 @@ export default function HomePage() {
                   <HomeView
                     currentBalance={currentBalance}
                     expenses={expenses}
+                    absences={absences}
+                    settlement={settlement}
+                    week={week}
                     categoryName={getCategoryName}
                     memberName={getMemberName}
                     currentMembershipId={session.currentMembershipId}
                     onOpenExpense={() => setExpenseDialogOpen(true)}
                     onGoToExpenses={() => setTab("expenses")}
+                    onGoToAbsences={() => setTab("absences")}
+                    onGoToHouse={() => setTab("house")}
                     onGoToRules={() => setTab("rules")}
                     onPayExpense={openPayment}
                   />
@@ -781,9 +786,11 @@ export default function HomePage() {
                     members={data.members}
                     absences={absences}
                     settlement={settlement}
+                    week={week}
                     selectedMonth={selectedMonth}
                     onMonthChange={setSelectedMonth}
                     currentMembershipId={session.currentMembershipId!}
+                    currentRole={session.role}
                     canManageHouse={canManageHouse}
                     loading={loading}
                     onCreateAbsence={createAbsence}
