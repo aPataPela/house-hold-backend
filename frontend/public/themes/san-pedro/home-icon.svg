@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Inicio sanpedrino">
-  <path d="M4.5 11.5 12 6.25l7.5 5.25" />
-  <path d="M7 11.5V18h10v-6.5" />
-  <path d="M10 18v-3.25A2 2 0 0 1 12 12.75h0a2 2 0 0 1 2 2V18" />
-  <path d="M8.5 15.25h7" />
-  <path d="M6 18c1.25-.9 2.75-1.15 4.25-.65s3 .5 4.25 0 3-.25 4.5.65" />
-</svg>

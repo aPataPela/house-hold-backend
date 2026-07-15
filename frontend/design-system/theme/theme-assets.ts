@@ -74,50 +74,59 @@ export interface ThemeAssets extends ThemeAssetSlots {
 }
 
 export function createThemeAssets(prefix: string): ThemeAssets {
-  const homeIcon = `/themes/${prefix}/home-icon.svg`;
-  const pageBackground = `/themes/${prefix}/pattern-page.svg`;
-  const surfaceTexture = `/themes/${prefix}/pattern-surface.svg`;
-  const ornament = `/themes/${prefix}/pattern-ornament.svg`;
-  const onboarding = `/themes/${prefix}/illustration-onboarding.svg`;
-  const emptyState = `/themes/${prefix}/illustration-empty.svg`;
+  const appBackground = `/themes/${prefix}/appBackground.svg`;
+  const authBackground = `/themes/${prefix}/authBackground.svg`;
+  const onboardingHero = `/themes/${prefix}/onboardingHero.svg`;
+  const homeHero = `/themes/${prefix}/homeHero.svg`;
+  const themePreview = `/themes/${prefix}/themePreview.webp`;
+  const footerDecoration = `/themes/${prefix}/footerDecoration.svg`;
+  const headerDecoration = `/themes/${prefix}/headerDecoration.svg`;
+  const modalDecoration = `/themes/${prefix}/modalDecoration.svg`;
+  const subtlePattern = `/themes/${prefix}/subtlePattern.svg`;
+  const expensesEmpty = `/themes/${prefix}/expensesEmpty.svg`;
+  const absencesEmpty = `/themes/${prefix}/absencesEmpty.svg`;
+  const tasksEmpty = `/themes/${prefix}/tasksEmpty.svg`;
+  const houseEmpty = `/themes/${prefix}/houseEmpty.svg`;
+  const rulesEmpty = `/themes/${prefix}/rulesEmpty.svg`;
+  const homeIcon = `/themes/${prefix}/homeIcon.svg`;
 
   return {
     homeIcon,
     patterns: {
-      pageBackground,
-      surfaceTexture,
-      ornament,
+      pageBackground: appBackground,
+      surfaceTexture: subtlePattern,
+      ornament: footerDecoration,
     },
     illustrations: {
-      emptyState,
-      onboarding,
+      emptyState: houseEmpty,
+      onboarding: onboardingHero,
     },
     backgrounds: {
-      appBackground: resource(pageBackground, { preload: true }),
-      authBackground: resource(surfaceTexture, { preload: true }),
-      onboardingBackground: resource(surfaceTexture, { preload: true }),
-      homeBackground: resource(pageBackground, { preload: true }),
+      appBackground: resource(appBackground, { format: "svg", preload: true }),
+      authBackground: resource(authBackground, { format: "svg", preload: true }),
+      onboardingBackground: resource(authBackground, { format: "svg", preload: true }),
+      homeBackground: resource(appBackground, { format: "svg", preload: true }),
     },
     hero: {
-      onboardingHero: resource(onboarding, { preload: true, alt: "Ilustración de onboarding" }),
-      homeHero: resource(emptyState, { preload: true, alt: "Ilustración de estado inicial" }),
-      themePreview: resource(homeIcon, { preload: true, width: 96, height: 96, alt: `Vista previa del tema ${prefix}` }),
+      onboardingHero: resource(onboardingHero, { format: "svg", preload: true, alt: "Ilustración de onboarding" }),
+      homeHero: resource(homeHero, { format: "svg", preload: true, alt: "Ilustración de inicio" }),
+      themePreview: resource(themePreview, { format: "webp", preload: true, width: 1200, height: 800, alt: `Vista previa del tema ${prefix}` }),
     },
     emptyStates: {
-      expensesEmpty: resource(emptyState, { alt: "Ilustración de gastos vacíos" }),
-      absencesEmpty: resource(emptyState, { alt: "Ilustración de ausencias vacías" }),
-      tasksEmpty: resource(emptyState, { alt: "Ilustración de tareas vacías" }),
-      houseEmpty: resource(emptyState, { alt: "Ilustración de casa vacía" }),
-      rulesEmpty: resource(emptyState, { alt: "Ilustración de reglas vacías" }),
+      expensesEmpty: resource(expensesEmpty, { format: "svg", alt: "Ilustración de gastos vacíos" }),
+      absencesEmpty: resource(absencesEmpty, { format: "svg", alt: "Ilustración de ausencias vacías" }),
+      tasksEmpty: resource(tasksEmpty, { format: "svg", alt: "Ilustración de tareas vacías" }),
+      houseEmpty: resource(houseEmpty, { format: "svg", alt: "Ilustración de casa vacía" }),
+      rulesEmpty: resource(rulesEmpty, { format: "svg", alt: "Ilustración de reglas vacías" }),
     },
     decorative: {
-      footerDecoration: resource(ornament),
-      headerDecoration: resource(ornament),
-      modalDecoration: resource(ornament),
-      subtlePattern: resource(surfaceTexture),
+      footerDecoration: resource(footerDecoration, { format: "svg" }),
+      headerDecoration: resource(headerDecoration, { format: "svg" }),
+      modalDecoration: resource(modalDecoration, { format: "svg" }),
+      subtlePattern: resource(subtlePattern, { format: "svg" }),
     },
     icons: {
-      homeIcon: resource(homeIcon, { width: 24, height: 24, alt: "Icono de inicio", preload: true }),
+      homeIcon: resource(homeIcon, { format: "svg", width: 24, height: 24, alt: "Icono de inicio", preload: true }),
     },
   };
 }
