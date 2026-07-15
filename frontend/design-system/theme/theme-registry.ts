@@ -33,7 +33,11 @@ export class ThemeRegistry {
   has(themeId: ThemeId): boolean {
     return this.entries.some((entry) => entry.themeId === themeId);
   }
+
+  resolve(options: { houseThemeId?: ThemeId; personalThemeId?: ThemeId | null }): ThemeDefinition {
+    const candidateId = options.personalThemeId ?? options.houseThemeId ?? this.entries[0]?.themeId ?? "patagonia";
+    return this.get(candidateId);
+  }
 }
 
 export const defaultThemeRegistry = ThemeRegistry.createDefault();
-

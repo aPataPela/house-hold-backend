@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { ThemeAssets } from "./theme-assets";
 
 export type ThemeId = "patagonia" | "chiloe" | "cordillera" | "san-pedro";
 export type ThemeMode = "light" | "dark";
@@ -195,9 +196,7 @@ export interface ThemeDefinition {
   elevation: ElevationTokens;
   typography: TypographyTokens;
   motion: MotionTokens;
-  patterns: PatternTokens;
-  illustrations: IllustrationTokens;
-  homeIcon: string;
+  assets: ThemeAssets;
   components: ThemeComponentTokens;
 }
 
@@ -207,12 +206,12 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
   const vars: Record<string, string | number> = {
     "--ds-theme-id": theme.metadata.id,
     "--ds-theme-mode": theme.metadata.mode,
-    "--ds-home-icon-url": `url("${theme.homeIcon}")`,
-    "--ds-pattern-page-background": `url("${theme.patterns.pageBackground}")`,
-    "--ds-pattern-surface-texture": `url("${theme.patterns.surfaceTexture}")`,
-    "--ds-pattern-ornament": `url("${theme.patterns.ornament}")`,
-    "--ds-illustration-empty-state": `url("${theme.illustrations.emptyState}")`,
-    "--ds-illustration-onboarding": `url("${theme.illustrations.onboarding}")`,
+    "--ds-home-icon-url": `url("${theme.assets.homeIcon}")`,
+    "--ds-pattern-page-background": `url("${theme.assets.patterns.pageBackground}")`,
+    "--ds-pattern-surface-texture": `url("${theme.assets.patterns.surfaceTexture}")`,
+    "--ds-pattern-ornament": `url("${theme.assets.patterns.ornament}")`,
+    "--ds-illustration-empty-state": `url("${theme.assets.illustrations.emptyState}")`,
+    "--ds-illustration-onboarding": `url("${theme.assets.illustrations.onboarding}")`,
   };
 
   for (const [group, value] of Object.entries(theme.primitiveTokens.color)) {

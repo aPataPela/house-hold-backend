@@ -15,6 +15,7 @@ import {
 } from "./theme-registry";
 import type { ThemeDefinition, ThemeId } from "./theme-contract";
 import { toThemeCssVariables } from "./theme-contract";
+import { applyThemeToDocument, clearThemeFromDocument } from "./theme-color-sync";
 
 export type ThemePreference = {
   houseThemeId: ThemeId;
@@ -95,6 +96,9 @@ export class ThemeService {
 export interface ThemeContextValue {
   registry: ThemeRegistry;
   service: ThemeService;
+  houseThemeId: ThemeId;
+  personalThemeId: ThemeId | null;
+  activeThemeId: ThemeId;
   preference: ThemePreference | null;
   theme: ThemeDefinition;
   reducedTransparency: boolean;
@@ -143,7 +147,9 @@ export function ThemeProvider({
   });
 
   const theme = service.resolveTheme(preference);
+  const themeVariables = useMemo(() => toThemeCssVariables(theme), [theme]);
   const resolvedReducedTransparency = service.resolveReducedTransparency(preference);
+  const activeThemeId = theme.metadata.id;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -156,9 +162,17 @@ export function ThemeProvider({
     });
   }, [houseThemeId, initialPersonalThemeId, preference, reducedTransparency, service]);
 
+  useEffect(() => {
+    applyThemeToDocument(theme, resolvedReducedTransparency, themeVariables as Record<`--${string}`, string | number>);
+    return () => clearThemeFromDocument();
+  }, [resolvedReducedTransparency, theme, themeVariables]);
+
   const value: ThemeContextValue = {
     registry,
     service,
+    houseThemeId,
+    personalThemeId: preference?.personalThemeId ?? null,
+    activeThemeId,
     preference,
     theme,
     reducedTransparency: resolvedReducedTransparency,
@@ -198,7 +212,7 @@ export function ThemeProvider({
         data-theme-mode={theme.metadata.mode}
         data-reduced-transparency={resolvedReducedTransparency ? "true" : "false"}
         style={{
-          ...toThemeCssVariables(theme),
+          ...themeVariables,
           ...style,
         }}
       >
