@@ -1,5 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
-  <rect width="128" height="128" rx="28" fill="#6e63ff"/>
-  <path d="M28 62L64 34l36 28v34H76V82H52v14H28V62Z" fill="#f8f7fd"/>
-  <path d="M48 84h32l4 20H44l4-20Z" fill="#f27558"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Inicio cordillerano">
+  <path d="M4.75 12 12 5l7.25 7" />
+  <path d="M7 12v6.5h10V12" />
+  <path d="M9 12.25 12 8.5l2.25 2.8L16.5 8.5l2 2.5" />
+  <path d="M8.5 18v-3.25h7V18" />
+  <path d="M10.5 18v-2h3v2" />
 </svg>

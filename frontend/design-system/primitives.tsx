@@ -722,7 +722,7 @@ Skeleton.displayName = "Skeleton";
 export interface BottomNavigationItem {
   value: string;
   label: string;
-  icon: ReactNode;
+  icon: ReactNode | ((active: boolean) => ReactNode);
   href?: string;
   disabled?: boolean;
 }
@@ -743,12 +743,13 @@ export const BottomNavigation = memo(
         <div className="ds-bottom-navigation__items">
           {items.map((item) => {
             const active = item.value === value;
+            const icon = typeof item.icon === "function" ? item.icon(active) : item.icon;
             const common = {
               "data-active": active ? "true" : undefined,
               className: "ds-bottom-navigation__item",
               children: (
                 <>
-                  <span aria-hidden="true">{item.icon}</span>
+                  <span aria-hidden="true">{icon}</span>
                   <span>{item.label}</span>
                   <span className="ds-bottom-navigation__item-indicator" aria-hidden="true" />
                 </>

@@ -117,7 +117,7 @@ export function createThemeAssets(prefix: string): ThemeAssets {
       subtlePattern: resource(surfaceTexture),
     },
     icons: {
-      homeIcon: resource(homeIcon, { width: 64, height: 64, alt: "Icono de inicio", preload: true }),
+      homeIcon: resource(homeIcon, { width: 24, height: 24, alt: "Icono de inicio", preload: true }),
     },
   };
 }

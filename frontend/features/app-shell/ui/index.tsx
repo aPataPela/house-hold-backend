@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  CalendarOff,
-  House,
-  LayoutDashboard,
-  ReceiptText,
-  SlidersHorizontal,
-} from "lucide-react";
 import type { ReactNode } from "react";
-import { Badge, BottomNavigation, Card, Toast } from "@/design-system";
-import { ThemeSwitcher } from "@/design-system/theme";
+import { Badge, BottomNavigation, Card, FunctionalIcon, ThemeHomeIcon, Toast } from "@/design-system";
+import { ThemeSwitcher, useTheme } from "@/design-system/theme";
 import type { AppSection, Session } from "@/lib/domain";
 
 export interface AppShellPermissions {
@@ -37,6 +30,8 @@ export function AppShell({
   notifications,
   modals,
 }: AppShellProps) {
+  const { activeThemeId } = useTheme();
+
   return (
     <div className="app-shell">
       <header className="app-shell__header ds-glass-surface">
@@ -63,11 +58,15 @@ export function AppShell({
           value={activeSection}
           onChange={(value) => onSectionChange(value as AppSection)}
           items={[
-            { value: "home", label: "Inicio", icon: <LayoutDashboard size={18} /> },
-            { value: "expenses", label: "Gastos", icon: <ReceiptText size={18} /> },
-            { value: "rules", label: "Reglas", icon: <SlidersHorizontal size={18} /> },
-            { value: "absences", label: "Ausencias", icon: <CalendarOff size={18} /> },
-            { value: "house", label: "Casa", icon: <House size={18} /> },
+            {
+              value: "home",
+              label: "Inicio",
+              icon: (active) => <ThemeHomeIcon themeId={activeThemeId} state={active ? "active" : "inactive"} size={20} />,
+            },
+            { value: "expenses", label: "Gastos", icon: <FunctionalIcon name="gastos" size={20} /> },
+            { value: "rules", label: "Reglas", icon: <FunctionalIcon name="reglas" size={20} /> },
+            { value: "absences", label: "Ausencias", icon: <FunctionalIcon name="ausencia" size={20} /> },
+            { value: "house", label: "Casa", icon: <FunctionalIcon name="casa" size={20} /> },
           ]}
         />
       </footer>
