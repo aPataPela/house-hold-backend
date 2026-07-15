@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/design-system/theme";
+import { themeDefinitions } from "@/design-system/theme/theme-definitions";
 import { ServiceWorkerRegister } from "./service-worker-register";
 import "./globals.css";
 
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#dfe4ec",
+  themeColor: themeDefinitions.patagonia.semanticColors.backgroundPage,
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

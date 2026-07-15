@@ -5,7 +5,6 @@ import {
   BadgeCheck,
   Check,
   ChevronDown,
-  CalendarOff,
   CookingPot,
   HelpCircle,
   Home,
@@ -13,17 +12,15 @@ import {
   Leaf,
   LogOut,
   Plus,
-  ReceiptText,
   RefreshCw,
-  SlidersHorizontal,
-  Users,
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { AppShell, AppNotification } from "@/features/app-shell";
 import { ExpenseDialog } from "@/features/expenses/expense-dialog";
 import { ExpensesView } from "@/features/expenses/expenses-view";
 import { PaymentDialog } from "@/features/expenses/payment-dialog";
 import { AbsencesView } from "@/features/absences/absences-view";
-import { HomeView } from "@/features/home/home-view";
+import { HomeView, buildHomeViewModel } from "@/features/home";
 import { RulesView } from "@/features/rules/rules-view";
 import { TutorialDialog } from "@/features/tutorial/tutorial-dialog";
 import {
@@ -35,7 +32,6 @@ import {
   currentMonthValue,
   dateInputValue,
   formatShortDate,
-  monthLabel,
   monthRange,
 } from "@/lib/date";
 import type {
@@ -99,10 +95,22 @@ export default function HomePage() {
     session?.householdId && session.currentMembershipId,
   );
   const canManageHouse = session?.role === "ADMIN";
-  const currentBalance =
-    balance?.members.find(
-      (member) => member.membershipId === session?.currentMembershipId,
-    )?.netBalance ?? 0;
+  const homeViewModel = useMemo(
+    () =>
+      hasHousehold && session
+        ? buildHomeViewModel({
+            month: selectedMonth,
+            members: data.members,
+            expenses,
+            absences,
+            settlement,
+            week,
+            balance,
+            currentMembershipId: session.currentMembershipId,
+          })
+        : null,
+    [absences, balance, data.members, expenses, hasHousehold, selectedMonth, session, settlement, week],
+  );
   const tutorialSteps = useMemo(
     () => getTutorialSteps(session?.role),
     [session?.role],
@@ -694,202 +702,151 @@ export default function HomePage() {
   const getMemberName = (id: string) => memberName(data.members, id);
 
   return (
-    <main className="app-shell">
-      <section className="phone-frame">
-        {!hydrated ? (
-          <LoadingView />
-        ) : !session ? (
-          <SetupView
-            onSubmit={authenticate}
-            message={message}
-            loading={loading}
-          />
-        ) : !hasHousehold ? (
-          <OnboardingView
-            userName={session.currentUserName}
-            createHousehold={createHousehold}
-            joinHousehold={joinHousehold}
-            logout={logout}
-            message={message}
-            loading={loading}
-          />
-        ) : (
-          <>
-            <header className="topbar">
-              <div>
-                <p className="eyebrow">{monthLabel(selectedMonth)}</p>
-                <h1>{session.householdName}</h1>
-              </div>
-              <button
-                className="avatar-button"
-                aria-label={`Abrir Casa, perfil de ${session.currentUserName}`}
-                title="Casa"
-                onClick={() => setTab("house")}
-              >
-                {session.currentUserName.slice(0, 1).toUpperCase()}
-              </button>
-            </header>
-
-            <div className="main-region">
-              {message && (
-                <p className="toast-message" role="status">
-                  {message}
-                </p>
-              )}
-
-              <div className="content">
-                {tab === "home" && (
-                  <HomeView
-                    currentBalance={currentBalance}
-                    expenses={expenses}
-                    absences={absences}
-                    settlement={settlement}
-                    week={week}
-                    categoryName={getCategoryName}
-                    memberName={getMemberName}
-                    currentMembershipId={session.currentMembershipId}
-                    onOpenExpense={() => setExpenseDialogOpen(true)}
-                    onGoToExpenses={() => setTab("expenses")}
-                    onGoToAbsences={() => setTab("absences")}
-                    onGoToHouse={() => setTab("house")}
-                    onGoToRules={() => setTab("rules")}
-                    onPayExpense={openPayment}
-                  />
-                )}
-                {tab === "expenses" && (
-                  <ExpensesView
-                    expenses={expenses}
-                    categories={data.categories}
-                    selectedMonth={selectedMonth}
-                    onMonthChange={setSelectedMonth}
-                    onOpenExpense={() => setExpenseDialogOpen(true)}
-                    categoryName={getCategoryName}
-                    memberName={getMemberName}
-                    currentMembershipId={session.currentMembershipId}
-                    onPayExpense={openPayment}
-                  />
-                )}
-                {tab === "rules" && (
-                  <RulesView
-                    categories={data.categories}
-                    members={data.members}
-                    rules={rules}
-                    currentMembershipId={session.currentMembershipId!}
-                    canManageHouse={canManageHouse}
-                    loading={loading}
-                    onCreateCategory={createCategory}
-                    onSetPreference={setPreference}
-                  />
-                )}
-                {tab === "absences" && (
-                  <AbsencesView
-                    members={data.members}
-                    absences={absences}
-                    settlement={settlement}
-                    week={week}
-                    selectedMonth={selectedMonth}
-                    onMonthChange={setSelectedMonth}
-                    currentMembershipId={session.currentMembershipId!}
-                    currentRole={session.role}
-                    canManageHouse={canManageHouse}
-                    loading={loading}
-                    onCreateAbsence={createAbsence}
-                    onCancelAbsence={cancelAbsence}
-                    memberName={getMemberName}
-                  />
-                )}
-                {tab === "house" && (
-                  <HouseView
-                    data={data}
-                    week={week}
-                    currentMembershipId={session.currentMembershipId!}
-                    createArea={createArea}
-                    createTask={createTask}
-                    generateWeek={generateWeek}
-                    markAssignment={markAssignment}
-                    logout={logout}
-                    restartTutorial={restartTutorial}
-                    inviteCode={session.inviteCode}
-                    role={session.role}
-                    regenerateInviteCode={regenerateInviteCode}
-                    loading={loading}
-                    canManageHouse={canManageHouse}
-                  />
-                )}
-              </div>
-            </div>
-
-            <nav className="bottom-nav" aria-label="Navegación principal">
-              <NavButton
-                icon={Home}
-                label="Inicio"
-                active={tab === "home"}
-                onClick={() => setTab("home")}
+    <main className="app-page">
+      {!hydrated ? (
+        <LoadingView />
+      ) : !session ? (
+        <SetupView
+          onSubmit={authenticate}
+          message={message}
+          loading={loading}
+        />
+      ) : !hasHousehold ? (
+        <OnboardingView
+          userName={session.currentUserName}
+          createHousehold={createHousehold}
+          joinHousehold={joinHousehold}
+          logout={logout}
+          message={message}
+          loading={loading}
+        />
+      ) : (
+        <AppShell
+          session={session}
+          activeSection={tab}
+          onSectionChange={setTab}
+          permissions={{
+            canManageHouse,
+            canManageMembers: canManageHouse,
+            canManageRules: canManageHouse,
+          }}
+          notifications={
+            message ? (
+              <AppNotification
+                title={message}
+                tone={message.toLowerCase().includes("error") ? "danger" : "success"}
               />
-              <NavButton
-                icon={ReceiptText}
-                label="Gastos"
-                active={tab === "expenses"}
-                onClick={() => setTab("expenses")}
+            ) : null
+          }
+          modals={
+            <>
+              <ExpenseDialog
+                open={expenseDialogOpen}
+                categories={data.categories}
+                payerName={session.currentUserName}
+                onClose={() => setExpenseDialogOpen(false)}
+                onNeedCategory={() => setTab("rules")}
+                onSubmit={createExpense}
               />
-              <NavButton
-                icon={SlidersHorizontal}
-                label="Reglas"
-                active={tab === "rules"}
-                onClick={() => setTab("rules")}
+              <PaymentDialog
+                open={paymentDialogOpen}
+                expense={paymentExpense}
+                currentMembershipId={session.currentMembershipId}
+                categoryName={getCategoryName}
+                memberName={getMemberName}
+                onClose={closePayment}
+                onSubmit={createPayment}
               />
-              <NavButton
-                icon={CalendarOff}
-                label="Ausencias"
-                active={tab === "absences"}
-                onClick={() => setTab("absences")}
+              <TutorialDialog
+                key={tutorialRunId}
+                open={tutorialOpen}
+                steps={tutorialSteps}
+                onSectionChange={setTab}
+                onExit={finishTutorial}
               />
-              <NavButton
-                icon={Users}
-                label="Casa"
-                active={tab === "house"}
-                onClick={() => setTab("house")}
-              />
-            </nav>
-
-            <ExpenseDialog
-              open={expenseDialogOpen}
-              categories={data.categories}
-              payerName={session.currentUserName}
-              onClose={() => setExpenseDialogOpen(false)}
-              onNeedCategory={() => setTab("rules")}
-              onSubmit={createExpense}
+            </>
+          }
+        >
+          {tab === "home" && homeViewModel ? (
+            <HomeView
+              viewModel={homeViewModel}
+              onOpenExpense={() => setExpenseDialogOpen(true)}
+              onGoToExpenses={() => setTab("expenses")}
+              onGoToAbsences={() => setTab("absences")}
+              onGoToHouse={() => setTab("house")}
+              onGoToRules={() => setTab("rules")}
+              onGoToTasks={() => setTab("house")}
             />
-            <PaymentDialog
-              open={paymentDialogOpen}
-              expense={paymentExpense}
-              currentMembershipId={session.currentMembershipId}
+          ) : null}
+          {tab === "expenses" && (
+            <ExpensesView
+              expenses={expenses}
+              categories={data.categories}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+              onOpenExpense={() => setExpenseDialogOpen(true)}
               categoryName={getCategoryName}
               memberName={getMemberName}
-              onClose={closePayment}
-              onSubmit={createPayment}
+              currentMembershipId={session.currentMembershipId}
+              onPayExpense={openPayment}
             />
-            <TutorialDialog
-              key={tutorialRunId}
-              open={tutorialOpen}
-              steps={tutorialSteps}
-              onSectionChange={setTab}
-              onExit={finishTutorial}
+          )}
+          {tab === "rules" && (
+            <RulesView
+              categories={data.categories}
+              members={data.members}
+              rules={rules}
+              currentMembershipId={session.currentMembershipId!}
+              canManageHouse={canManageHouse}
+              loading={loading}
+              onCreateCategory={createCategory}
+              onSetPreference={setPreference}
             />
-          </>
-        )}
-      </section>
+          )}
+          {tab === "absences" && (
+            <AbsencesView
+              members={data.members}
+              absences={absences}
+              settlement={settlement}
+              week={week}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+              currentMembershipId={session.currentMembershipId!}
+              currentRole={session.role}
+              canManageHouse={canManageHouse}
+              loading={loading}
+              onCreateAbsence={createAbsence}
+              onCancelAbsence={cancelAbsence}
+              memberName={getMemberName}
+            />
+          )}
+          {tab === "house" && (
+            <HouseView
+              data={data}
+              week={week}
+              currentMembershipId={session.currentMembershipId!}
+              createArea={createArea}
+              createTask={createTask}
+              generateWeek={generateWeek}
+              markAssignment={markAssignment}
+              logout={logout}
+              restartTutorial={restartTutorial}
+              inviteCode={session.inviteCode}
+              role={session.role}
+              regenerateInviteCode={regenerateInviteCode}
+              loading={loading}
+              canManageHouse={canManageHouse}
+            />
+          )}
+        </AppShell>
+      )}
     </main>
   );
 }
 
 function LoadingView() {
   return (
-    <div
-      className="loading-screen"
-      role="status"
-      aria-label="Cargando Casa Viva"
-    >
+    <div className="app-shell app-shell--surface loading-screen" role="status" aria-label="Cargando Casa Viva">
       <span className="brand-mark">
         <Home size={27} />
       </span>
@@ -912,7 +869,7 @@ function SetupView({
 }) {
   const [mode, setMode] = useState<"login" | "register">("login");
   return (
-    <div className="setup-screen">
+    <div className="app-shell app-shell--surface setup-screen">
       <header className="auth-header">
         <span className="brand-mark">
           <Home size={27} />
@@ -1020,7 +977,7 @@ function OnboardingView({
     if (saved) form.reset();
   };
   return (
-    <div className="setup-screen">
+    <div className="app-shell app-shell--surface setup-screen">
       <header className="auth-header compact-auth">
         <span className="brand-mark">
           <KeyRound size={26} />
@@ -1369,29 +1326,6 @@ function ChoreRow({
         </span>
       )}
     </article>
-  );
-}
-
-function NavButton({
-  icon: Icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: typeof Home;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={active ? "nav-button active" : "nav-button"}
-      onClick={onClick}
-      aria-current={active ? "page" : undefined}
-    >
-      <Icon size={21} />
-      <span>{label}</span>
-    </button>
   );
 }
 
