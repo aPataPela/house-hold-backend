@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AppShell, AppNotification } from "@/features/app-shell";
 import { ExpenseDialog } from "@/features/expenses/expense-dialog";
 import { ExpensesView } from "@/features/expenses/expenses-view";
@@ -1119,6 +1120,19 @@ function HouseView({
         </section>
       )}
 
+      <section className="content-section">
+        <div className="section-header">
+          <h3>Identidad visual</h3>
+          <span>Casa → Personalización</span>
+        </div>
+        <p className="ds-field-hint">
+          La preferencia visual se configura por integrante y no altera el contenido ni los permisos.
+        </p>
+        <Link className="soft-action theme-identity-link" href="/personalizacion/identidad-visual">
+          Abrir identidad visual
+        </Link>
+      </section>
+
       <section className="content-section help-section">
         <HelpCircle size={22} aria-hidden="true" />
         <div>
@@ -1128,6 +1142,19 @@ function HouseView({
         <button className="soft-action" type="button" onClick={restartTutorial}>
           Ver guía
         </button>
+      </section>
+
+      <section className="content-section">
+        <div className="section-header">
+          <h3>Personalización</h3>
+          <span>Identidad visual</span>
+        </div>
+        <p className="ds-field-hint">
+          Cada integrante puede usar el tema de la casa o definir una preferencia personal.
+        </p>
+        <Link className="soft-action theme-identity-link" href="/personalizacion/identidad-visual">
+          Ir a identidad visual
+        </Link>
       </section>
 
       <details className="secondary-section">
