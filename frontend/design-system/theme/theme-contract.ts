@@ -16,12 +16,13 @@ export interface ThemeMetadata {
 
 export interface PrimitiveTokens {
   color: {
-    neutral: Record<string, string>;
-    brand: Record<string, string>;
-    accent: Record<string, string>;
-    success: Record<string, string>;
-    warning: Record<string, string>;
-    danger: Record<string, string>;
+    primary: ColorScale;
+    secondary: ColorScale;
+    accent: ColorScale;
+    neutral: ColorScale;
+    success: ColorScale;
+    warning: ColorScale;
+    danger: ColorScale;
   };
   spacing: Record<string, string>;
   radius: Record<string, string>;
@@ -55,25 +56,37 @@ export interface PrimitiveTokens {
 }
 
 export interface SemanticColors {
-  backgroundPage: string;
-  backgroundSurface: string;
-  backgroundGlass: string;
-  backgroundElevated: string;
+  pageBackground: string;
+  surface: string;
+  elevatedSurface: string;
+  glassSurface: string;
   textPrimary: string;
   textSecondary: string;
-  borderSubtle: string;
+  textMuted: string;
+  textOnPrimary: string;
+  textOnDanger: string;
   actionPrimary: string;
   actionPrimaryHover: string;
   actionSecondary: string;
+  borderSubtle: string;
+  divider: string;
   focusRing: string;
   success: string;
   warning: string;
   danger: string;
+  info: string;
+  backgroundPage?: string;
+  backgroundSurface?: string;
+  backgroundGlass?: string;
+  backgroundElevated?: string;
 }
 
 export interface GlassTokens {
+  tint: string;
   background: string;
   border: string;
+  shadow: string;
+  overlay: string;
   blur: string;
   saturation: string;
   fallbackBackground: string;
@@ -93,6 +106,30 @@ export interface TypographyTokens {
   body: string;
   mono: string;
   scale: Record<string, { size: string; lineHeight: string; weight: number }>;
+}
+
+export interface ColorScale {
+  50: string;
+  100: string;
+  200: string;
+  300: string;
+  400: string;
+  500: string;
+  600: string;
+  700: string;
+  800: string;
+  900: string;
+  950: string;
+}
+
+export interface DataVisualizationTokens {
+  chartSeries1: string;
+  chartSeries2: string;
+  chartSeries3: string;
+  chartSeries4: string;
+  chartSeries5: string;
+  chartSeries6?: string;
+  chartNeutral: string;
 }
 
 export interface MotionTokens {
@@ -193,6 +230,7 @@ export interface ThemeDefinition {
   primitiveTokens: PrimitiveTokens;
   semanticColors: SemanticColors;
   glass: GlassTokens;
+  dataVisualization?: DataVisualizationTokens;
   elevation: ElevationTokens;
   typography: TypographyTokens;
   motion: MotionTokens;
@@ -212,11 +250,25 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
     "--ds-pattern-ornament": `url("${theme.assets.patterns.ornament}")`,
     "--ds-illustration-empty-state": `url("${theme.assets.illustrations.emptyState}")`,
     "--ds-illustration-onboarding": `url("${theme.assets.illustrations.onboarding}")`,
+    "--ds-page-background": theme.semanticColors.pageBackground,
+    "--ds-surface": theme.semanticColors.surface,
+    "--ds-elevated-surface": theme.semanticColors.elevatedSurface,
+    "--ds-glass-surface": theme.semanticColors.glassSurface,
+    "--ds-text-muted": theme.semanticColors.textMuted,
+    "--ds-text-on-primary": theme.semanticColors.textOnPrimary,
+    "--ds-text-on-danger": theme.semanticColors.textOnDanger,
+    "--ds-divider": theme.semanticColors.divider,
+    "--ds-info": theme.semanticColors.info,
   };
 
   for (const [group, value] of Object.entries(theme.primitiveTokens.color)) {
     for (const [step, token] of Object.entries(value)) {
       vars[`--ds-color-${group}-${step}`] = token;
+    }
+  }
+  if (theme.primitiveTokens.color.primary) {
+    for (const [step, token] of Object.entries(theme.primitiveTokens.color.primary)) {
+      vars[`--ds-color-brand-${step}`] = token;
     }
   }
 
@@ -265,9 +317,20 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
   for (const [key, token] of Object.entries(theme.semanticColors)) {
     vars[`--ds-${toKebab(key)}`] = token;
   }
+  if (theme.semanticColors.pageBackground) {
+    vars["--ds-background-page"] = theme.semanticColors.backgroundPage ?? theme.semanticColors.pageBackground;
+    vars["--ds-background-surface"] = theme.semanticColors.backgroundSurface ?? theme.semanticColors.surface;
+    vars["--ds-background-glass"] = theme.semanticColors.backgroundGlass ?? theme.semanticColors.glassSurface;
+    vars["--ds-background-elevated"] = theme.semanticColors.backgroundElevated ?? theme.semanticColors.elevatedSurface;
+  }
 
   for (const [key, token] of Object.entries(theme.glass)) {
     vars[`--ds-glass-${toKebab(key)}`] = token;
+  }
+  if (theme.dataVisualization) {
+    for (const [key, token] of Object.entries(theme.dataVisualization)) {
+      vars[`--ds-${toKebab(key)}`] = token;
+    }
   }
 
   for (const [key, token] of Object.entries(theme.elevation)) {

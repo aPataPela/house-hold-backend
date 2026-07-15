@@ -3,48 +3,23 @@ import type {
   ThemeId,
   ThemeComponentTokens,
   PrimitiveTokens,
+  ColorScale,
+  DataVisualizationTokens,
 } from "./theme-contract";
 import { createThemeAssets } from "./theme-assets";
 
-const primitiveTokens: PrimitiveTokens = {
+type PaletteInput = {
+  primary: ColorScale;
+  secondary: ColorScale;
+  accent: ColorScale;
+  neutral: ColorScale;
+  success?: ColorScale;
+  warning?: ColorScale;
+  danger?: ColorScale;
+};
+
+const basePrimitiveTokens = {
   color: {
-    neutral: {
-      0: "#ffffff",
-      50: "#f8fafc",
-      100: "#eef2f7",
-      200: "#dce3ed",
-      300: "#c7d0de",
-      400: "#9aa8bc",
-      500: "#66758c",
-      600: "#4e5b72",
-      700: "#364154",
-      800: "#222b39",
-      900: "#121826",
-    },
-    brand: {
-      50: "#eef5ff",
-      100: "#d9e7ff",
-      200: "#b6ceff",
-      300: "#86afff",
-      400: "#5a8fff",
-      500: "#2f64d0",
-      600: "#254fb0",
-      700: "#1f3f8b",
-      800: "#173062",
-      900: "#102145",
-    },
-    accent: {
-      50: "#fff7ea",
-      100: "#ffe8bf",
-      200: "#ffd28b",
-      300: "#ffbb51",
-      400: "#ffa12a",
-      500: "#f2800c",
-      600: "#d96706",
-      700: "#ae5104",
-      800: "#843d05",
-      900: "#5e2c05",
-    },
     success: {
       50: "#edfdf4",
       100: "#d2f8e1",
@@ -56,6 +31,7 @@ const primitiveTokens: PrimitiveTokens = {
       700: "#136843",
       800: "#0f4f34",
       900: "#0b3925",
+      950: "#06241a",
     },
     warning: {
       50: "#fff8e5",
@@ -68,6 +44,7 @@ const primitiveTokens: PrimitiveTokens = {
       700: "#845101",
       800: "#5f3b01",
       900: "#402800",
+      950: "#281900",
     },
     danger: {
       50: "#fff0f1",
@@ -80,6 +57,7 @@ const primitiveTokens: PrimitiveTokens = {
       700: "#9f1a2d",
       800: "#731423",
       900: "#50111b",
+      950: "#330b12",
     },
   },
   spacing: {
@@ -175,48 +153,337 @@ const primitiveTokens: PrimitiveTokens = {
       decelerate: "cubic-bezier(0, 0, 0.2, 1)",
     },
   },
+} as const;
+
+function createPrimitiveTokens(palette: PaletteInput): PrimitiveTokens {
+  return {
+    color: {
+      primary: palette.primary,
+      secondary: palette.secondary,
+      accent: palette.accent,
+      neutral: palette.neutral,
+      success: palette.success ?? basePrimitiveTokens.color.success,
+      warning: palette.warning ?? basePrimitiveTokens.color.warning,
+      danger: palette.danger ?? basePrimitiveTokens.color.danger,
+    },
+    spacing: basePrimitiveTokens.spacing,
+    radius: basePrimitiveTokens.radius,
+    typography: basePrimitiveTokens.typography,
+    blur: basePrimitiveTokens.blur,
+    opacity: basePrimitiveTokens.opacity,
+    shadows: basePrimitiveTokens.shadows,
+    motion: basePrimitiveTokens.motion,
+  };
+}
+
+const defaultSuccessScale = basePrimitiveTokens.color.success;
+const defaultWarningScale = basePrimitiveTokens.color.warning;
+const defaultDangerScale = basePrimitiveTokens.color.danger;
+
+const primaryChromaticScale = {
+  50: "#eefaf0",
+  100: "#d7f0db",
+  200: "#b2e0be",
+  300: "#83ca9b",
+  400: "#5bb076",
+  500: "#3f9658",
+  600: "#2f7a44",
+  700: "#245f35",
+  800: "#1b4829",
+  900: "#14361f",
+  950: "#0d2415",
+} as const;
+
+const secondaryMarineScale = {
+  50: "#eef8fb",
+  100: "#d9edf2",
+  200: "#b6dbe4",
+  300: "#89c5d2",
+  400: "#5eacbf",
+  500: "#3a92ac",
+  600: "#2e748c",
+  700: "#245a6d",
+  800: "#1c4654",
+  900: "#163641",
+  950: "#0f252d",
+} as const;
+
+const accentFloridScale = {
+  50: "#fff1f4",
+  100: "#ffdce6",
+  200: "#ffb8cb",
+  300: "#ff8dae",
+  400: "#f9638e",
+  500: "#e83d6f",
+  600: "#c9285c",
+  700: "#a71f4b",
+  800: "#82183a",
+  900: "#65122d",
+  950: "#430c1e",
+} as const;
+const patagoniaNeutralScale = {
+  50: "#f8faf7",
+  100: "#ecf1eb",
+  200: "#d9e3d7",
+  300: "#beccbc",
+  400: "#97a897",
+  500: "#748276",
+  600: "#5a685d",
+  700: "#435043",
+  800: "#2d372f",
+  900: "#1d241f",
+  950: "#111713",
+} as const;
+
+const chiloePrimaryScale = {
+  50: "#ecfbfb",
+  100: "#d3f4f3",
+  200: "#abe8e5",
+  300: "#79d6d1",
+  400: "#45c3bc",
+  500: "#20ada5",
+  600: "#168b86",
+  700: "#126d69",
+  800: "#0f5452",
+  900: "#0d4040",
+  950: "#082c2c",
+} as const;
+
+const chiloeSecondaryScale = {
+  50: "#eef5ff",
+  100: "#d8e7ff",
+  200: "#b7cfff",
+  300: "#89b0ff",
+  400: "#5c8fff",
+  500: "#336fe8",
+  600: "#2859bf",
+  700: "#214596",
+  800: "#1a356f",
+  900: "#14294e",
+  950: "#0f1b34",
+} as const;
+
+const chiloeAccentScale = {
+  50: "#f7f0ff",
+  100: "#ead9ff",
+  200: "#d3b3ff",
+  300: "#b47dff",
+  400: "#9c5af4",
+  500: "#7d33d8",
+  600: "#6326b0",
+  700: "#4e1f89",
+  800: "#3c1767",
+  900: "#2d1148",
+  950: "#1d0b2f",
+} as const;
+
+const chiloeNeutralScale = {
+  50: "#fcfaf6",
+  100: "#f2ede6",
+  200: "#e1d7cc",
+  300: "#c7b4a5",
+  400: "#ab9287",
+  500: "#89756c",
+  600: "#695b54",
+  700: "#4f4440",
+  800: "#352e2c",
+  900: "#241f1e",
+  950: "#171312",
+} as const;
+
+const cordilleraPrimaryScale = {
+  50: "#eef4fb",
+  100: "#dce8f5",
+  200: "#c0d1e8",
+  300: "#9bb2d2",
+  400: "#748bb5",
+  500: "#536f95",
+  600: "#3f5878",
+  700: "#30445d",
+  800: "#253549",
+  900: "#1b2838",
+  950: "#111a24",
+} as const;
+
+const cordilleraSecondaryScale = {
+  50: "#f5f7f9",
+  100: "#e4e8ee",
+  200: "#cbd2dc",
+  300: "#a8b2c0",
+  400: "#808c9b",
+  500: "#606d7c",
+  600: "#4a5663",
+  700: "#38424d",
+  800: "#272f37",
+  900: "#181e24",
+  950: "#0f1318",
+} as const;
+
+const cordilleraAccentScale = {
+  50: "#fff3eb",
+  100: "#ffe0d1",
+  200: "#ffbf9f",
+  300: "#f99267",
+  400: "#e96a43",
+  500: "#cf4f2d",
+  600: "#a83e25",
+  700: "#853220",
+  800: "#64261a",
+  900: "#4a1d14",
+  950: "#30130d",
+} as const;
+
+const cordilleraNeutralScale = {
+  50: "#f8fafc",
+  100: "#edf1f5",
+  200: "#d7dee5",
+  300: "#b9c3cd",
+  400: "#909ca9",
+  500: "#6e7a86",
+  600: "#55606b",
+  700: "#3f4851",
+  800: "#2a3138",
+  900: "#181d22",
+  950: "#0d1013",
+} as const;
+
+const sanPedroPrimaryScale = {
+  50: "#e9fbfb",
+  100: "#ccf5f4",
+  200: "#9eebe8",
+  300: "#67ddd8",
+  400: "#39c6c1",
+  500: "#18ada9",
+  600: "#138986",
+  700: "#0f6765",
+  800: "#0c4f4d",
+  900: "#0a3b3a",
+  950: "#082828",
+} as const;
+
+const sanPedroSecondaryScale = {
+  50: "#fff3ea",
+  100: "#ffdcca",
+  200: "#ffc0a2",
+  300: "#ffa26e",
+  400: "#f67d47",
+  500: "#de5f27",
+  600: "#b84b1f",
+  700: "#913a1a",
+  800: "#6d2a15",
+  900: "#501e10",
+  950: "#34130a",
+} as const;
+
+const sanPedroAccentScale = {
+  50: "#faf1ff",
+  100: "#f0dcff",
+  200: "#e2b9ff",
+  300: "#cc8cff",
+  400: "#b45ef2",
+  500: "#9b36db",
+  600: "#7c29b2",
+  700: "#61208a",
+  800: "#4b1968",
+  900: "#361244",
+  950: "#220b2a",
+} as const;
+
+const sanPedroNeutralScale = {
+  50: "#fffaf1",
+  100: "#f7eddc",
+  200: "#ecd9bf",
+  300: "#d9bc94",
+  400: "#c39a68",
+  500: "#9f7746",
+  600: "#7d5d36",
+  700: "#5e4529",
+  800: "#42311d",
+  900: "#2b2014",
+  950: "#171008",
+} as const;
+
+const patagoniaData: DataVisualizationTokens = {
+  chartSeries1: "#245f35",
+  chartSeries2: "#3a92ac",
+  chartSeries3: "#e83d6f",
+  chartSeries4: "#2f8f5c",
+  chartSeries5: "#a86d13",
+  chartNeutral: "#748276",
 };
 
-const sharedComponentTokens = (semantic: ThemeDefinition["semanticColors"], glass: ThemeDefinition["glass"]): ThemeComponentTokens => ({
+const chiloeData: DataVisualizationTokens = {
+  chartSeries1: "#20ada5",
+  chartSeries2: "#214596",
+  chartSeries3: "#d28a00",
+  chartSeries4: "#bf2d43",
+  chartSeries5: "#7d33d8",
+  chartSeries6: "#1b8c62",
+  chartNeutral: "#5b6c6c",
+};
+
+const cordilleraData: DataVisualizationTokens = {
+  chartSeries1: "#30445d",
+  chartSeries2: "#a84a2b",
+  chartSeries3: "#b4424d",
+  chartSeries4: "#4c7fb5",
+  chartSeries5: "#c47d15",
+  chartNeutral: "#61707a",
+};
+
+const sanPedroData: DataVisualizationTokens = {
+  chartSeries1: "#18ada9",
+  chartSeries2: "#a14f24",
+  chartSeries3: "#b45ef2",
+  chartSeries4: "#de5f27",
+  chartSeries5: "#c88b10",
+  chartNeutral: "#6f5d4c",
+};
+
+const sharedComponentTokens = (
+  semantic: ThemeDefinition["semanticColors"],
+  glass: ThemeDefinition["glass"],
+  palette: PaletteInput,
+): ThemeComponentTokens => ({
   button: {
     primary: {
       background: semantic.actionPrimary,
       backgroundHover: semantic.actionPrimaryHover,
-      text: "#ffffff",
+      text: semantic.textOnPrimary,
       border: "transparent",
       shadow: "var(--ds-elevation-1)",
     },
     secondary: {
-      background: semantic.backgroundSurface,
-      backgroundHover: semantic.backgroundElevated,
+      background: semantic.surface,
+      backgroundHover: semantic.elevatedSurface,
       text: semantic.textPrimary,
       border: semantic.borderSubtle,
       shadow: "var(--ds-elevation-0)",
     },
     danger: {
       background: semantic.danger,
-      backgroundHover: primitiveTokens.color.danger[600],
-      text: "#ffffff",
+      backgroundHover: palette.danger?.[600] ?? semantic.danger,
+      text: semantic.textOnDanger,
       border: "transparent",
       shadow: "var(--ds-elevation-1)",
     },
   },
   card: {
-    background: semantic.backgroundSurface,
+    background: semantic.surface,
     border: semantic.borderSubtle,
     shadow: "var(--ds-elevation-1)",
   },
   input: {
-    background: semantic.backgroundSurface,
-    backgroundFocus: semantic.backgroundElevated,
+    background: semantic.surface,
+    backgroundFocus: semantic.elevatedSurface,
     border: semantic.borderSubtle,
     borderFocus: semantic.focusRing,
     text: semantic.textPrimary,
-    placeholder: semantic.textSecondary,
+    placeholder: semantic.textMuted,
   },
   modal: {
-    backdrop: "rgb(10 16 26 / 52%)",
-    background: semantic.backgroundElevated,
+    backdrop: glass.overlay,
+    background: semantic.elevatedSurface,
     border: semantic.borderSubtle,
     shadow: "var(--ds-elevation-4)",
   },
@@ -228,70 +495,91 @@ const sharedComponentTokens = (semantic: ThemeDefinition["semanticColors"], glas
     indicator: semantic.actionPrimary,
   },
   toast: {
-    background: semantic.backgroundElevated,
+    background: semantic.elevatedSurface,
     text: semantic.textPrimary,
     border: semantic.borderSubtle,
   },
   tabs: {
-    background: semantic.backgroundSurface,
+    background: semantic.surface,
     indicator: semantic.actionPrimary,
     textActive: semantic.textPrimary,
     textInactive: semantic.textSecondary,
     border: semantic.borderSubtle,
   },
   skeleton: {
-    base: primitiveTokens.color.neutral[200],
-    shimmer: primitiveTokens.color.neutral[50],
+    base: palette.neutral[200],
+    shimmer: palette.neutral[50],
   },
 });
 
 function buildTheme(theme: {
   id: ThemeId;
   label: string;
-  primary: string;
-  primaryHover: string;
-  accent: string;
-  accentHover: string;
-  surface: string;
-  surfaceSoft: string;
-  elevated: string;
-  page: string;
-  glass: string;
-  border: string;
-  text: string;
-  textSecondary: string;
-  success: string;
-  warning: string;
-  danger: string;
+  palette: PaletteInput;
+  semantic: {
+    pageBackground: string;
+    surface: string;
+    elevatedSurface: string;
+    glassSurface: string;
+    textPrimary: string;
+    textSecondary: string;
+    textMuted: string;
+    actionPrimary: string;
+    actionPrimaryHover: string;
+    actionSecondary: string;
+    borderSubtle: string;
+    divider: string;
+    focusRing: string;
+    success: string;
+    warning: string;
+    danger: string;
+    info: string;
+  };
+  glassTint: string;
   glassBorder: string;
-  glassFallback: string;
+  glassShadow: string;
+  glassOverlay: string;
   shadowTint: string;
+  dataVisualization: DataVisualizationTokens;
   assets: ThemeDefinition["assets"];
 }): ThemeDefinition {
+  const primitiveTokens = createPrimitiveTokens(theme.palette);
   const semanticColors: ThemeDefinition["semanticColors"] = {
-    backgroundPage: theme.page,
-    backgroundSurface: theme.surface,
-    backgroundGlass: theme.glass,
-    backgroundElevated: theme.elevated,
-    textPrimary: theme.text,
-    textSecondary: theme.textSecondary,
-    borderSubtle: theme.border,
-    actionPrimary: theme.primary,
-    actionPrimaryHover: theme.primaryHover,
-    actionSecondary: theme.accent,
-    focusRing: theme.primaryHover,
-    success: theme.success,
-    warning: theme.warning,
-    danger: theme.danger,
+    pageBackground: theme.semantic.pageBackground,
+    surface: theme.semantic.surface,
+    elevatedSurface: theme.semantic.elevatedSurface,
+    glassSurface: theme.semantic.glassSurface,
+    textPrimary: theme.semantic.textPrimary,
+    textSecondary: theme.semantic.textSecondary,
+    textMuted: theme.semantic.textMuted,
+    textOnPrimary: "#ffffff",
+    textOnDanger: "#ffffff",
+    actionPrimary: theme.semantic.actionPrimary,
+    actionPrimaryHover: theme.semantic.actionPrimaryHover,
+    actionSecondary: theme.semantic.actionSecondary,
+    borderSubtle: theme.semantic.borderSubtle,
+    divider: theme.semantic.divider,
+    focusRing: theme.semantic.focusRing,
+    success: theme.semantic.success,
+    warning: theme.semantic.warning,
+    danger: theme.semantic.danger,
+    info: theme.semantic.info,
+    backgroundPage: theme.semantic.pageBackground,
+    backgroundSurface: theme.semantic.surface,
+    backgroundGlass: theme.semantic.glassSurface,
+    backgroundElevated: theme.semantic.elevatedSurface,
   };
 
   const glass = {
-    background: theme.glass,
+    tint: theme.glassTint,
+    background: theme.semantic.glassSurface,
     border: theme.glassBorder,
+    shadow: theme.glassShadow,
+    overlay: theme.glassOverlay,
     blur: primitiveTokens.blur.lg,
     saturation: "130%",
-    fallbackBackground: theme.glassFallback,
-    fallbackBorder: theme.border,
+    fallbackBackground: theme.semantic.surface,
+    fallbackBorder: theme.semantic.borderSubtle,
   };
 
   return {
@@ -307,6 +595,7 @@ function buildTheme(theme: {
     primitiveTokens,
     semanticColors,
     glass,
+    dataVisualization: theme.dataVisualization,
     elevation: {
       0: "none",
       1: `0 8px 18px ${theme.shadowTint}22`,
@@ -335,7 +624,7 @@ function buildTheme(theme: {
       },
     },
     assets: theme.assets,
-    components: sharedComponentTokens(semanticColors, glass),
+    components: sharedComponentTokens(semanticColors, glass, theme.palette),
   };
 }
 
@@ -343,93 +632,157 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
   patagonia: buildTheme({
     id: "patagonia",
     label: "Patagonia",
-    primary: "#2f64d0",
-    primaryHover: "#254fb0",
-    accent: "#2aa79d",
-    accentHover: "#22857d",
-    surface: "#f7f9fc",
-    surfaceSoft: "#e8edf5",
-    elevated: "#ffffff",
-    page: "#d7dce5",
-    glass: "rgb(247 249 252 / 76%)",
-    border: "#b3bfce",
-    text: "#1e2434",
-    textSecondary: "#5f697b",
-    success: "#1ba85f",
-    warning: "#d68a03",
-    danger: "#ea2f4a",
-    glassBorder: "rgb(255 255 255 / 52%)",
-    glassFallback: "#eef2f7",
-    shadowTint: "#1e2434",
+    palette: {
+      primary: primaryChromaticScale,
+      secondary: secondaryMarineScale,
+      accent: accentFloridScale,
+      neutral: patagoniaNeutralScale,
+      success: defaultSuccessScale,
+      warning: defaultWarningScale,
+      danger: defaultDangerScale,
+    },
+    semantic: {
+      pageBackground: "#e8efe6",
+      surface: "#f7faf6",
+      elevatedSurface: "#ffffff",
+      glassSurface: "rgb(247 250 246 / 82%)",
+      textPrimary: "#162018",
+      textSecondary: "#4f5d53",
+      textMuted: "#62705f",
+      actionPrimary: "#2a6340",
+      actionPrimaryHover: "#245339",
+      actionSecondary: "#2f7280",
+      borderSubtle: "#c9d5c5",
+      divider: "#dfe7dd",
+      focusRing: "#4c9d69",
+      success: "#2f8f5c",
+      warning: "#a86d13",
+      danger: "#bf3a4b",
+      info: "#2f6f98",
+    },
+    glassTint: "rgb(247 250 246 / 82%)",
+    glassBorder: "rgb(255 255 255 / 56%)",
+    glassShadow: "0 18px 40px rgb(20 39 28 / 18%)",
+    glassOverlay: "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
+    shadowTint: "#1e241f",
+    dataVisualization: patagoniaData,
     assets: createThemeAssets("patagonia"),
   }),
   chiloe: buildTheme({
     id: "chiloe",
     label: "Chiloé",
-    primary: "#2c7a72",
-    primaryHover: "#23645d",
-    accent: "#d9844a",
-    accentHover: "#b96b34",
-    surface: "#f7f4ee",
-    surfaceSoft: "#ede5da",
-    elevated: "#fffaf4",
-    page: "#d8d0c5",
-    glass: "rgb(247 244 238 / 78%)",
-    border: "#c5b6a4",
-    text: "#25313f",
-    textSecondary: "#65707c",
-    success: "#20785b",
-    warning: "#a97719",
-    danger: "#c93d4a",
-    glassBorder: "rgb(255 250 244 / 48%)",
-    glassFallback: "#f2ebe2",
+    palette: {
+      primary: chiloePrimaryScale,
+      secondary: chiloeSecondaryScale,
+      accent: chiloeAccentScale,
+      neutral: chiloeNeutralScale,
+      success: defaultSuccessScale,
+      warning: defaultWarningScale,
+      danger: defaultDangerScale,
+    },
+    semantic: {
+      pageBackground: "#eaf7f6",
+      surface: "#fffdf8",
+      elevatedSurface: "#ffffff",
+      glassSurface: "rgb(255 253 248 / 84%)",
+      textPrimary: "#142224",
+      textSecondary: "#4f6060",
+      textMuted: "#5b6c6c",
+      actionPrimary: "#126d69",
+      actionPrimaryHover: "#0f5b57",
+      actionSecondary: "#214596",
+      borderSubtle: "#d4e2e0",
+      divider: "#e7efee",
+      focusRing: "#0f5b57",
+      success: "#1b8c62",
+      warning: "#d28a00",
+      danger: "#bf2d43",
+      info: "#2c6ee8",
+    },
+    glassTint: "rgb(255 253 248 / 84%)",
+    glassBorder: "rgb(255 255 255 / 54%)",
+    glassShadow: "0 18px 40px rgb(16 44 49 / 18%)",
+    glassOverlay: "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
     shadowTint: "#3a2f28",
+    dataVisualization: chiloeData,
     assets: createThemeAssets("chiloe"),
   }),
   cordillera: buildTheme({
     id: "cordillera",
     label: "Cordillera",
-    primary: "#6e63ff",
-    primaryHover: "#594de0",
-    accent: "#f27558",
-    accentHover: "#d65f43",
-    surface: "#f8f7fd",
-    surfaceSoft: "#ece9fb",
-    elevated: "#ffffff",
-    page: "#d8d8e6",
-    glass: "rgb(248 247 253 / 78%)",
-    border: "#c1c5df",
-    text: "#222538",
-    textSecondary: "#64687b",
-    success: "#18805a",
-    warning: "#c98300",
-    danger: "#df3150",
-    glassBorder: "rgb(255 255 255 / 54%)",
-    glassFallback: "#f0effa",
+    palette: {
+      primary: cordilleraPrimaryScale,
+      secondary: cordilleraSecondaryScale,
+      accent: cordilleraAccentScale,
+      neutral: cordilleraNeutralScale,
+      success: defaultSuccessScale,
+      warning: defaultWarningScale,
+      danger: defaultDangerScale,
+    },
+    semantic: {
+      pageBackground: "#e9edf2",
+      surface: "#f7f8fa",
+      elevatedSurface: "#ffffff",
+      glassSurface: "rgb(247 248 250 / 84%)",
+      textPrimary: "#192029",
+      textSecondary: "#55606b",
+      textMuted: "#61707a",
+      actionPrimary: "#30445d",
+      actionPrimaryHover: "#253549",
+      actionSecondary: "#a84a2b",
+      borderSubtle: "#c7ced6",
+      divider: "#dde3e9",
+      focusRing: "#748bb5",
+      success: "#2b8a5b",
+      warning: "#c47d15",
+      danger: "#b4424d",
+      info: "#4c7fb5",
+    },
+    glassTint: "rgb(247 248 250 / 84%)",
+    glassBorder: "rgb(255 255 255 / 56%)",
+    glassShadow: "0 18px 40px rgb(24 30 36 / 18%)",
+    glassOverlay: "linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 6%))",
     shadowTint: "#26274a",
+    dataVisualization: cordilleraData,
     assets: createThemeAssets("cordillera"),
   }),
   "san-pedro": buildTheme({
     id: "san-pedro",
     label: "San Pedro",
-    primary: "#c86f2e",
-    primaryHover: "#b65e22",
-    accent: "#2f7f95",
-    accentHover: "#256776",
-    surface: "#fdf7ef",
-    surfaceSoft: "#f1e4d3",
-    elevated: "#fffaf5",
-    page: "#e2d2bf",
-    glass: "rgb(253 247 239 / 80%)",
-    border: "#d0bc9f",
-    text: "#34291f",
-    textSecondary: "#736151",
-    success: "#1f8a66",
-    warning: "#c1880e",
-    danger: "#cc4d38",
-    glassBorder: "rgb(255 250 243 / 50%)",
-    glassFallback: "#f8efe1",
+    palette: {
+      primary: sanPedroPrimaryScale,
+      secondary: sanPedroSecondaryScale,
+      accent: sanPedroAccentScale,
+      neutral: sanPedroNeutralScale,
+      success: defaultSuccessScale,
+      warning: defaultWarningScale,
+      danger: defaultDangerScale,
+    },
+    semantic: {
+      pageBackground: "#fbf1df",
+      surface: "#fffaf1",
+      elevatedSurface: "#ffffff",
+      glassSurface: "rgb(255 250 241 / 86%)",
+      textPrimary: "#31251b",
+      textSecondary: "#6d5a49",
+      textMuted: "#6f5d4c",
+      actionPrimary: "#0f6765",
+      actionPrimaryHover: "#0c5553",
+      actionSecondary: "#a14f24",
+      borderSubtle: "#e2cfb6",
+      divider: "#ebddc9",
+      focusRing: "#0c5553",
+      success: "#2f8f61",
+      warning: "#c88b10",
+      danger: "#be3b2e",
+      info: "#2c88b8",
+    },
+    glassTint: "rgb(255 250 241 / 86%)",
+    glassBorder: "rgb(255 255 255 / 58%)",
+    glassShadow: "0 18px 40px rgb(63 41 26 / 18%)",
+    glassOverlay: "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
     shadowTint: "#5c3c21",
+    dataVisualization: sanPedroData,
     assets: createThemeAssets("san-pedro"),
   }),
 };

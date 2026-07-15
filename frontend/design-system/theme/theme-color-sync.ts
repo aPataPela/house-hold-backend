@@ -19,7 +19,7 @@ export function applyThemeToDocument(
   root.dataset.themeMode = theme.metadata.mode;
   root.dataset.reducedTransparency = reducedTransparency ? "true" : "false";
   root.style.colorScheme = theme.metadata.mode;
-  syncThemeColorMeta(theme.semanticColors.backgroundPage);
+  syncThemeColorMeta(theme.semanticColors.pageBackground ?? theme.semanticColors.backgroundPage ?? theme.semanticColors.surface);
 }
 
 export function clearThemeFromDocument(): void {
