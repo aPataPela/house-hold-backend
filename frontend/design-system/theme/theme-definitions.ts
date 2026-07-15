@@ -4,6 +4,7 @@ import type {
   ThemeComponentTokens,
   PrimitiveTokens,
 } from "./theme-contract";
+import { createThemeAssets } from "./theme-assets";
 
 const primitiveTokens: PrimitiveTokens = {
   color: {
@@ -265,12 +266,7 @@ function buildTheme(theme: {
   glassBorder: string;
   glassFallback: string;
   shadowTint: string;
-  homeIcon: string;
-  patternPage: string;
-  patternSurface: string;
-  patternOrnament: string;
-  illustrationEmpty: string;
-  illustrationOnboarding: string;
+  assets: ThemeDefinition["assets"];
 }): ThemeDefinition {
   const semanticColors: ThemeDefinition["semanticColors"] = {
     backgroundPage: theme.page,
@@ -338,16 +334,7 @@ function buildTheme(theme: {
         decelerate: primitiveTokens.motion.easing.decelerate,
       },
     },
-    patterns: {
-      pageBackground: theme.patternPage,
-      surfaceTexture: theme.patternSurface,
-      ornament: theme.patternOrnament,
-    },
-    illustrations: {
-      emptyState: theme.illustrationEmpty,
-      onboarding: theme.illustrationOnboarding,
-    },
-    homeIcon: theme.homeIcon,
+    assets: theme.assets,
     components: sharedComponentTokens(semanticColors, glass),
   };
 }
@@ -374,12 +361,7 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
     glassBorder: "rgb(255 255 255 / 52%)",
     glassFallback: "#eef2f7",
     shadowTint: "#1e2434",
-    homeIcon: "/themes/patagonia/home-icon.svg",
-    patternPage: "/themes/patagonia/pattern-page.svg",
-    patternSurface: "/themes/patagonia/pattern-surface.svg",
-    patternOrnament: "/themes/patagonia/pattern-ornament.svg",
-    illustrationEmpty: "/themes/patagonia/illustration-empty.svg",
-    illustrationOnboarding: "/themes/patagonia/illustration-onboarding.svg",
+    assets: createThemeAssets("patagonia"),
   }),
   chiloe: buildTheme({
     id: "chiloe",
@@ -402,12 +384,7 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
     glassBorder: "rgb(255 250 244 / 48%)",
     glassFallback: "#f2ebe2",
     shadowTint: "#3a2f28",
-    homeIcon: "/themes/chiloe/home-icon.svg",
-    patternPage: "/themes/chiloe/pattern-page.svg",
-    patternSurface: "/themes/chiloe/pattern-surface.svg",
-    patternOrnament: "/themes/chiloe/pattern-ornament.svg",
-    illustrationEmpty: "/themes/chiloe/illustration-empty.svg",
-    illustrationOnboarding: "/themes/chiloe/illustration-onboarding.svg",
+    assets: createThemeAssets("chiloe"),
   }),
   cordillera: buildTheme({
     id: "cordillera",
@@ -430,12 +407,7 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
     glassBorder: "rgb(255 255 255 / 54%)",
     glassFallback: "#f0effa",
     shadowTint: "#26274a",
-    homeIcon: "/themes/cordillera/home-icon.svg",
-    patternPage: "/themes/cordillera/pattern-page.svg",
-    patternSurface: "/themes/cordillera/pattern-surface.svg",
-    patternOrnament: "/themes/cordillera/pattern-ornament.svg",
-    illustrationEmpty: "/themes/cordillera/illustration-empty.svg",
-    illustrationOnboarding: "/themes/cordillera/illustration-onboarding.svg",
+    assets: createThemeAssets("cordillera"),
   }),
   "san-pedro": buildTheme({
     id: "san-pedro",
@@ -458,11 +430,6 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
     glassBorder: "rgb(255 250 243 / 50%)",
     glassFallback: "#f8efe1",
     shadowTint: "#5c3c21",
-    homeIcon: "/themes/san-pedro/home-icon.svg",
-    patternPage: "/themes/san-pedro/pattern-page.svg",
-    patternSurface: "/themes/san-pedro/pattern-surface.svg",
-    patternOrnament: "/themes/san-pedro/pattern-ornament.svg",
-    illustrationEmpty: "/themes/san-pedro/illustration-empty.svg",
-    illustrationOnboarding: "/themes/san-pedro/illustration-onboarding.svg",
+    assets: createThemeAssets("san-pedro"),
   }),
 };
