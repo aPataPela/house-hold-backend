@@ -1,81 +1,62 @@
 "use client";
 
-import {
-  ArrowUpRight,
-  BadgeCheck,
-  CalendarOff,
-  House,
-  Plus,
-  ReceiptText,
-  Scale,
-  WalletCards,
-} from "lucide-react";
-import type {
-  Absence,
-  ChoreWeek,
-  Expense,
-  MonthlySettlement,
-} from "@/lib/domain";
-import { formatBalance, formatCurrency } from "@/lib/format";
-import { ExpenseList } from "@/features/expenses/expenses-view";
+import { ArrowUpRight, CalendarOff, House, Plus, ReceiptText, Scale, Sparkles } from "lucide-react";
+import { Badge, Button, Card, EmptyState } from "@/design-system";
+import type { HomeQuickActionId, HomeViewModel } from "./application";
 
-type HomeViewProps = {
-  currentBalance: number;
-  expenses: Expense[];
-  absences: Absence[];
-  settlement: MonthlySettlement | null;
-  week: ChoreWeek | null;
-  categoryName: (id: string) => string;
-  memberName: (id: string) => string;
-  currentMembershipId?: string;
+export interface HomeViewProps {
+  viewModel: HomeViewModel;
   onOpenExpense: () => void;
   onGoToExpenses: () => void;
   onGoToAbsences: () => void;
   onGoToHouse: () => void;
   onGoToRules: () => void;
-  onPayExpense?: (expense: Expense) => void;
-};
+  onGoToTasks: () => void;
+}
 
 export function HomeView({
-  currentBalance,
-  expenses,
-  absences,
-  settlement,
-  week,
-  categoryName,
-  memberName,
-  currentMembershipId,
+  viewModel,
   onOpenExpense,
   onGoToExpenses,
   onGoToAbsences,
   onGoToHouse,
   onGoToRules,
-  onPayExpense,
+  onGoToTasks,
 }: HomeViewProps) {
-  const total = expenses.reduce((sum, expense) => sum + expense.totalAmount, 0);
-  const activeAbsences = absences.filter(
-    (absence) => absence.status === "ACTIVE",
-  );
-  const absenceDays = settlement?.totalAbsenceDays ?? 0;
-  const totalTasks = week?.tasks.length ?? 0;
-  const doneTasks =
-    week?.tasks.filter((task) => task.weeklyStatus === "DONE").length ?? 0;
+  const actionMap: Record<HomeQuickActionId, () => void> = {
+    expenses: onOpenExpense,
+    absences: onGoToAbsences,
+    rules: onGoToRules,
+    house: onGoToHouse,
+    tasks: onGoToTasks,
+  };
+
+  if (viewModel.emptyState) {
+    return (
+      <EmptyState
+        title="Aún no hay actividad"
+        description="Cuando existan gastos, ausencias o tareas, este tablero mostrará la convivencia mensual."
+        action={
+          <Button type="button" leadingIcon={<Plus size={16} />} onClick={onOpenExpense}>
+            Registrar gasto
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
-    <section data-tutorial="home" className="home-dashboard">
+    <section className="home-dashboard" data-tutorial="home">
       <div className="page-heading">
         <p className="eyebrow">Panel central</p>
-        <h2>La casa en un vistazo</h2>
+        <h2>{viewModel.heroTitle}</h2>
       </div>
 
       <section className="home-hero">
         <div className="home-hero-copy">
           <span className="home-hero-badge">Convivencia activa</span>
-          <h3>Gastos, ausencias y tareas viven en el mismo tablero.</h3>
-          <p>
-            La casa se entiende mejor cuando la presencia, la carga económica y
-            la operativa aparecen juntas.
-          </p>
+          <h3>{viewModel.heroDescription}</h3>
+          <p>La información se entrega ya calculada por las consultas del sistema.</p>
           <div className="home-hero-actions">
             <button type="button" className="primary-action" onClick={onOpenExpense}>
               <Plus size={18} /> Registrar gasto
@@ -86,79 +67,155 @@ export function HomeView({
           </div>
         </div>
         <div className="home-hero-orb" aria-hidden="true">
-          <WalletCards size={34} />
+          <Sparkles size={34} />
         </div>
       </section>
 
       <div className="home-grid">
-        <article className="home-card home-card-accent">
-          <div className="home-card-head">
-            <span>Convivencia</span>
-            <Scale size={18} aria-hidden="true" />
-          </div>
-          <strong>{formatBalance(currentBalance)}</strong>
-          <p>{formatCurrency(settlement?.totalAmount ?? total)} en el mes</p>
-          <button className="text-action" type="button" onClick={onGoToRules}>
-            Ver reparto <ArrowUpRight size={15} />
-          </button>
-        </article>
-
-        <button className="home-card home-card-button" type="button" onClick={onGoToAbsences}>
-          <div className="home-card-head">
-            <span>Ausencias</span>
-            <CalendarOff size={18} aria-hidden="true" />
-          </div>
-          <strong>{activeAbsences.length}</strong>
-          <p>{absenceDays} días fuera este mes</p>
-          <span className="home-card-link">
-            Abrir calendario <ArrowUpRight size={15} />
-          </span>
-        </button>
-
-        <button className="home-card home-card-button" type="button" onClick={onGoToHouse}>
-          <div className="home-card-head">
-            <span>Tareas</span>
-            <BadgeCheck size={18} aria-hidden="true" />
-          </div>
-          <strong>{doneTasks}</strong>
-          <p>
-            {totalTasks > 0
-              ? `de ${totalTasks} tareas listas en la semana`
-              : "Todavía no hay semana generada"}
-          </p>
-          <span className="home-card-link">
-            Abrir panel <ArrowUpRight size={15} />
-          </span>
-        </button>
+        {viewModel.summaryMetrics.map((metric, index) => (
+          <Card key={`${metric.label}-${index}`} padding="md" elevated={index === 0}>
+            <div className="home-card-head">
+              <span>{metric.label}</span>
+              {index === 0 ? <Scale size={18} aria-hidden="true" /> : null}
+            </div>
+            <strong>{metric.value}</strong>
+            {metric.helperText ? <p>{metric.helperText}</p> : null}
+          </Card>
+        ))}
       </div>
 
       <div className="metric-grid">
-        <article className="metric-block">
-          <ReceiptText size={20} aria-hidden="true" />
-          <span>Gasto del mes</span>
-          <strong>{formatCurrency(total)}</strong>
-        </article>
-        <article className="metric-block">
-          <House size={20} aria-hidden="true" />
-          <span>Presencia efectiva</span>
-          <strong>{settlement?.totalPresenceDays ?? 0} días</strong>
-        </article>
+        {viewModel.presence.map((metric, index) => (
+          <Card key={`${metric.label}-${index}`} padding="md">
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--ds-space-2)" }}>
+              {index === 0 ? <House size={20} aria-hidden="true" /> : <ReceiptText size={20} aria-hidden="true" />}
+              <span>{metric.label}</span>
+            </div>
+            <strong>{metric.value}</strong>
+            {metric.helperText ? <p className="ds-field-hint">{metric.helperText}</p> : null}
+          </Card>
+        ))}
       </div>
 
       <div className="section-header">
-        <h3>Últimos gastos</h3>
-        <button className="text-action" type="button" onClick={onGoToExpenses}>
-          Ver todos
-        </button>
+        <h3>Accesos rápidos</h3>
       </div>
-      <ExpenseList
-        expenses={expenses.slice(0, 3)}
-        categoryName={categoryName}
-        memberName={memberName}
-        currentMembershipId={currentMembershipId}
-        onPayExpense={onPayExpense}
-        emptyText="Registra el primer gasto de este mes."
-      />
+      <div className="home-quick-actions">
+        {viewModel.quickActions.map((action) => (
+          <button key={action.id} type="button" className="home-quick-action" onClick={actionMap[action.id]}>
+            <div>
+              <strong>{action.label}</strong>
+              <p className="ds-field-hint">{action.description}</p>
+            </div>
+            <Badge tone={action.tone === "primary" ? "success" : "neutral"}>
+              <ArrowUpRight size={14} />
+            </Badge>
+          </button>
+        ))}
+      </div>
+
+      <div className="home-lane-grid">
+        <Card padding="lg">
+          <div className="section-header">
+            <h3>Gastos</h3>
+            <Button type="button" variant="ghost" onClick={onGoToExpenses}>
+              Ver todos
+            </Button>
+          </div>
+          <div className="home-rail">
+            {viewModel.expenses.length > 0 ? (
+              viewModel.expenses.map((expense) => (
+                <article key={expense.expenseId} className="home-rail-item">
+                  <div>
+                    <strong>{expense.title}</strong>
+                    <p className="ds-field-hint">{expense.subtitle}</p>
+                  </div>
+                  <div style={{ display: "grid", justifyItems: "end" }}>
+                    <Badge tone={expense.statusTone}>{expense.statusLabel}</Badge>
+                    <strong>{expense.amountLabel}</strong>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <EmptyState title="Sin gastos recientes" description="Registra el primer movimiento del mes." />
+            )}
+          </div>
+        </Card>
+
+        <Card padding="lg">
+          <div className="section-header">
+            <h3>Presencia</h3>
+            <Button type="button" variant="ghost" onClick={onGoToAbsences}>
+              Abrir
+            </Button>
+          </div>
+          <div className="home-rail">
+            {viewModel.upcomingAbsences.length > 0 ? (
+              viewModel.upcomingAbsences.map((absence) => (
+                <article key={absence.absenceId} className="home-rail-item">
+                  <div>
+                    <strong>{absence.title}</strong>
+                    <p className="ds-field-hint">{absence.subtitle}</p>
+                  </div>
+                  <Badge tone={absence.statusTone}>{absence.statusLabel}</Badge>
+                </article>
+              ))
+            ) : (
+              <EmptyState title="Sin próximas ausencias" description="La casa no tiene ausencias activas cercanas." />
+            )}
+          </div>
+        </Card>
+      </div>
+
+      <div className="home-lane-grid">
+        <Card padding="lg">
+          <div className="section-header">
+            <h3>Tareas disponibles</h3>
+            <Button type="button" variant="ghost" onClick={onGoToTasks}>
+              Ver semana
+            </Button>
+          </div>
+          <div className="home-rail">
+            {viewModel.availableTasks.length > 0 ? (
+              viewModel.availableTasks.map((task) => (
+                <article key={task.taskId} className="home-rail-item">
+                  <div>
+                    <strong>{task.title}</strong>
+                    <p className="ds-field-hint">{task.subtitle}</p>
+                  </div>
+                  <Badge tone={task.statusTone}>{task.statusLabel}</Badge>
+                </article>
+              ))
+            ) : (
+              <EmptyState title="Sin tareas disponibles" description="Todavía no hay asignaciones semanales activas." />
+            )}
+          </div>
+        </Card>
+
+        <Card padding="lg">
+          <div className="section-header">
+            <h3>Movimientos recientes</h3>
+            <Button type="button" variant="ghost" onClick={onGoToExpenses}>
+              Ver historial
+            </Button>
+          </div>
+          <div className="home-rail">
+            {viewModel.recentMovements.length > 0 ? (
+              viewModel.recentMovements.map((movement) => (
+                <article key={movement.movementId} className="home-rail-item">
+                  <div>
+                    <strong>{movement.title}</strong>
+                    <p className="ds-field-hint">{movement.subtitle}</p>
+                  </div>
+                  {movement.valueLabel ? <strong>{movement.valueLabel}</strong> : <Badge tone="neutral">Info</Badge>}
+                </article>
+              ))
+            ) : (
+              <EmptyState title="Sin movimientos recientes" description="Este mes todavía no hay actividad." />
+            )}
+          </div>
+        </Card>
+      </div>
     </section>
   );
 }
