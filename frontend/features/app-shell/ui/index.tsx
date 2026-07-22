@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Badge, BottomNavigation, Card, FunctionalIcon, ThemeHomeIcon, Toast } from "@/design-system";
-import { ThemeSwitcher, useTheme } from "@/design-system/theme";
+import { Badge, BottomNavigation, Card, FunctionalIcon, ThemeArtwork, ThemeBackground, ThemeHomeIcon, Toast } from "@/design-system";
+import { ThemeSwitcher } from "@/design-system/theme";
 import type { AppSection, Session } from "@/lib/domain";
 
 export interface AppShellPermissions {
@@ -30,10 +30,9 @@ export function AppShell({
   notifications,
   modals,
 }: AppShellProps) {
-  const { activeThemeId } = useTheme();
-
   return (
     <div className="app-shell">
+      <ThemeBackground slot="appBackground" className="app-shell__background" loading="eager" fetchPriority="high" />
       <header className="app-shell__header ds-glass-surface">
         <div className="app-shell__header-copy">
           <p className="eyebrow">{session.householdName ?? "Shared Household"}</p>
@@ -54,6 +53,13 @@ export function AppShell({
       </main>
 
       <footer className="app-shell__footer">
+        <ThemeArtwork
+          slot="footerDecoration"
+          decorative
+          loading="eager"
+          fetchPriority="low"
+          className="app-shell__footer-decoration"
+        />
         <BottomNavigation
           value={activeSection}
           onChange={(value) => onSectionChange(value as AppSection)}
@@ -61,7 +67,7 @@ export function AppShell({
             {
               value: "home",
               label: "Inicio",
-              icon: (active) => <ThemeHomeIcon themeId={activeThemeId} state={active ? "active" : "inactive"} size={20} />,
+              icon: (active) => <ThemeHomeIcon state={active ? "active" : "inactive"} size={20} />,
             },
             { value: "expenses", label: "Gastos", icon: <FunctionalIcon name="gastos" size={20} /> },
             { value: "rules", label: "Reglas", icon: <FunctionalIcon name="reglas" size={20} /> },
