@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" fill="none" role="img" aria-hidden="true">
-<defs>
-    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#f7feff"/><stop offset="100%" stop-color="#eaf9fb"/></linearGradient>
-    <filter id="softBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="18"/></filter></defs>
-<rect width="1200" height="900" fill="url(#bg)"/><ellipse cx="816.0000000000001" cy="162" rx="420" ry="198" fill="#f0cf53" fill-opacity="0.12" filter="url(#softBlur)"/><path d="M0 567 C 144 513, 312 495.00000000000006, 456 558 C 624 630, 780 594, 960 531 C 1080 486.00000000000006, 1140 468, 1200 477 L 1200 900 L 0 900 Z" fill="#4b94c8" fill-opacity="0.32"/><path d="M0 720 C 216 666, 324 747, 504 711 C 696 666, 852 774, 1032 711 C 1116 684, 1164 666, 1200 675 L 1200 900 L 0 900 Z" fill="#a56b44" fill-opacity="0.18"/><path d="M120 252.00000000000003 C 240 162, 336.00000000000006 144, 432 198 C 528 252.00000000000003, 636 180, 792 153 C 936 126.00000000000001, 1080 162, 1176 225" stroke="#8e6ce3" stroke-opacity="0.22" stroke-width="7" stroke-linecap="round" fill="none"/>
-</svg>

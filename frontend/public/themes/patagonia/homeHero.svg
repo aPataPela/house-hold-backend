@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" fill="none" role="img" aria-hidden="true">
-<defs>
-    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#f8fbf7"/><stop offset="100%" stop-color="#eef7f0"/></linearGradient>
-    <filter id="softBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="18"/></filter></defs>
-<rect width="1200" height="720" fill="url(#bg)"/><ellipse cx="816.0000000000001" cy="129.6" rx="420" ry="158.4" fill="#e86f87" fill-opacity="0.12" filter="url(#softBlur)"/><path d="M0 518.4 C 168.00000000000003 432, 288 417.59999999999997, 444 489.6 C 600 561.6, 780 503.99999999999994, 1008 432 L 1200 432 L 1200 720 L 0 720 Z" fill="#5f8f67" fill-opacity="0.52"/><path d="M0 446.4 C 192 360, 384 345.59999999999997, 624 410.4 C 864 475.20000000000005, 996 396.00000000000006, 1176 345.59999999999997 L 1200 345.59999999999997 L 1200 619.2 L 0 619.2 Z" fill="#4fa5b6" fill-opacity="0.24"/><circle cx="180" cy="144" r="57.6" fill="#ffffff" fill-opacity="0.36" filter="url(#softBlur)"/><circle cx="983.9999999999999" cy="187.20000000000002" r="79.2" fill="#ffffff" fill-opacity="0.26" filter="url(#softBlur)"/>
-</svg>

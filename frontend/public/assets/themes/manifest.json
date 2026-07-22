@@ -1,0 +1,452 @@
+{
+  "version": 2,
+  "source": "casa_viva_all_theme_packs",
+  "license": "Casa Viva self-authored assets; no external visual sources declared by the source packs.",
+  "runtimePolicy": "WebP illustrations and backgrounds; SVG Home icons; PNG source exports excluded.",
+  "themes": [
+    {
+      "themeId": "patagonia",
+      "complete": true,
+      "files": [
+        {
+          "file": "app-background.webp",
+          "format": "webp",
+          "width": 449,
+          "height": 360,
+          "bytes": 51178
+        },
+        {
+          "file": "auth-background.webp",
+          "format": "webp",
+          "width": 226,
+          "height": 360,
+          "bytes": 33660
+        },
+        {
+          "file": "onboarding-hero.webp",
+          "format": "webp",
+          "width": 368,
+          "height": 360,
+          "bytes": 48588
+        },
+        {
+          "file": "home-hero.webp",
+          "format": "webp",
+          "width": 419,
+          "height": 360,
+          "bytes": 54052
+        },
+        {
+          "file": "theme-preview.webp",
+          "format": "webp",
+          "width": 184,
+          "height": 215,
+          "bytes": 15488
+        },
+        {
+          "file": "footer-decoration.webp",
+          "format": "webp",
+          "width": 193,
+          "height": 215,
+          "bytes": 11600
+        },
+        {
+          "file": "subtle-pattern.webp",
+          "format": "webp",
+          "width": 188,
+          "height": 215,
+          "bytes": 9272
+        },
+        {
+          "file": "empty-expenses.webp",
+          "format": "webp",
+          "width": 197,
+          "height": 215,
+          "bytes": 12740
+        },
+        {
+          "file": "empty-absences.webp",
+          "format": "webp",
+          "width": 193,
+          "height": 215,
+          "bytes": 13188
+        },
+        {
+          "file": "empty-tasks.webp",
+          "format": "webp",
+          "width": 194,
+          "height": 215,
+          "bytes": 12478
+        },
+        {
+          "file": "empty-house.webp",
+          "format": "webp",
+          "width": 234,
+          "height": 215,
+          "bytes": 13974
+        },
+        {
+          "file": "home-icon.svg",
+          "format": "svg",
+          "width": 24,
+          "height": 24,
+          "bytes": 525
+        },
+        {
+          "file": "rules-empty.svg",
+          "format": "svg",
+          "width": 320,
+          "height": 240,
+          "bytes": 1051
+        },
+        {
+          "file": "header-decoration.svg",
+          "format": "svg",
+          "width": 1200,
+          "height": 96,
+          "bytes": 498
+        },
+        {
+          "file": "modal-decoration.svg",
+          "format": "svg",
+          "width": 1200,
+          "height": 160,
+          "bytes": 608
+        }
+      ]
+    },
+    {
+      "themeId": "chiloe",
+      "complete": true,
+      "files": [
+        {
+          "file": "app-background.webp",
+          "format": "webp",
+          "width": 362,
+          "height": 231,
+          "bytes": 37458
+        },
+        {
+          "file": "auth-background.webp",
+          "format": "webp",
+          "width": 290,
+          "height": 231,
+          "bytes": 28462
+        },
+        {
+          "file": "onboarding-hero.webp",
+          "format": "webp",
+          "width": 311,
+          "height": 231,
+          "bytes": 33886
+        },
+        {
+          "file": "home-hero.webp",
+          "format": "webp",
+          "width": 480,
+          "height": 231,
+          "bytes": 49022
+        },
+        {
+          "file": "theme-preview.webp",
+          "format": "webp",
+          "width": 261,
+          "height": 170,
+          "bytes": 22326
+        },
+        {
+          "file": "footer-decoration.webp",
+          "format": "webp",
+          "width": 348,
+          "height": 170,
+          "bytes": 19516
+        },
+        {
+          "file": "subtle-pattern.webp",
+          "format": "webp",
+          "width": 296,
+          "height": 170,
+          "bytes": 23244
+        },
+        {
+          "file": "empty-expenses.webp",
+          "format": "webp",
+          "width": 309,
+          "height": 170,
+          "bytes": 21726
+        },
+        {
+          "file": "empty-absences.webp",
+          "format": "webp",
+          "width": 261,
+          "height": 177,
+          "bytes": 21380
+        },
+        {
+          "file": "empty-tasks.webp",
+          "format": "webp",
+          "width": 306,
+          "height": 177,
+          "bytes": 20048
+        },
+        {
+          "file": "empty-house.webp",
+          "format": "webp",
+          "width": 284,
+          "height": 177,
+          "bytes": 23120
+        },
+        {
+          "file": "home-icon.svg",
+          "format": "svg",
+          "width": 24,
+          "height": 24,
+          "bytes": 411
+        },
+        {
+          "file": "rules-empty.svg",
+          "format": "svg",
+          "width": 320,
+          "height": 240,
+          "bytes": 1027
+        },
+        {
+          "file": "header-decoration.svg",
+          "format": "svg",
+          "width": 1200,
+          "height": 96,
+          "bytes": 500
+        },
+        {
+          "file": "modal-decoration.svg",
+          "format": "svg",
+          "width": 1200,
+          "height": 160,
+          "bytes": 610
+        }
+      ]
+    },
+    {
+      "themeId": "cordillera",
+      "complete": true,
+      "files": [
+        {
+          "file": "app-background.webp",
+          "format": "webp",
+          "width": 336,
+          "height": 245,
+          "bytes": 29854
+        },
+        {
+          "file": "auth-background.webp",
+          "format": "webp",
+          "width": 293,
+          "height": 245,
+          "bytes": 27164
+        },
+        {
+          "file": "onboarding-hero.webp",
+          "format": "webp",
+          "width": 400,
+          "height": 245,
+          "bytes": 37738
+        },
+        {
+          "file": "home-hero.webp",
+          "format": "webp",
+          "width": 420,
+          "height": 245,
+          "bytes": 34532
+        },
+        {
+          "file": "theme-preview.webp",
+          "format": "webp",
+          "width": 270,
+          "height": 182,
+          "bytes": 19382
+        },
+        {
+          "file": "footer-decoration.webp",
+          "format": "webp",
+          "width": 358,
+          "height": 182,
+          "bytes": 13450
+        },
+        {
+          "file": "subtle-pattern.webp",
+          "format": "webp",
+          "width": 316,
+          "height": 182,
+          "bytes": 13478
+        },
+        {
+          "file": "empty-expenses.webp",
+          "format": "webp",
+          "width": 295,
+          "height": 182,
+          "bytes": 15492
+        },
+        {
+          "file": "empty-absences.webp",
+          "format": "webp",
+          "width": 257,
+          "height": 153,
+          "bytes": 17264
+        },
+        {
+          "file": "empty-tasks.webp",
+          "format": "webp",
+          "width": 322,
+          "height": 153,
+          "bytes": 18660
+        },
+        {
+          "file": "empty-house.webp",
+          "format": "webp",
+          "width": 275,
+          "height": 153,
+          "bytes": 16186
+        },
+        {
+          "file": "home-icon.svg",
+          "format": "svg",
+          "width": 24,
+          "height": 24,
+          "bytes": 364
+        },
+        {
+          "file": "rules-empty.svg",
+          "format": "svg",
+          "width": 320,
+          "height": 240,
+          "bytes": 1074
+        },
+        {
+          "file": "header-decoration.svg",
+          "format": "svg",
+          "width": 1200,
+          "height": 96,
+          "bytes": 500
+        },
+        {
+          "file": "modal-decoration.svg",
+          "format": "svg",
+          "width": 1200,
+          "height": 160,
+          "bytes": 610
+        }
+      ]
+    },
+    {
+      "themeId": "san-pedro",
+      "complete": true,
+      "files": [
+        {
+          "file": "app-background.webp",
+          "format": "webp",
+          "width": 450,
+          "height": 263,
+          "bytes": 38660
+        },
+        {
+          "file": "auth-background.webp",
+          "format": "webp",
+          "width": 241,
+          "height": 263,
+          "bytes": 24374
+        },
+        {
+          "file": "onboarding-hero.webp",
+          "format": "webp",
+          "width": 387,
+          "height": 263,
+          "bytes": 39806
+        },
+        {
+          "file": "home-hero.webp",
+          "format": "webp",
+          "width": 361,
+          "height": 263,
+          "bytes": 42222
+        },
+        {
+          "file": "theme-preview.webp",
+          "format": "webp",
+          "width": 166,
+          "height": 105,
+          "bytes": 7426
+        },
+        {
+          "file": "footer-decoration.webp",
+          "format": "webp",
+          "width": 205,
+          "height": 172,
+          "bytes": 6630
+        },
+        {
+          "file": "subtle-pattern.webp",
+          "format": "webp",
+          "width": 149,
+          "height": 182,
+          "bytes": 5640
+        },
+        {
+          "file": "empty-expenses.webp",
+          "format": "webp",
+          "width": 153,
+          "height": 128,
+          "bytes": 6194
+        },
+        {
+          "file": "empty-absences.webp",
+          "format": "webp",
+          "width": 155,
+          "height": 128,
+          "bytes": 6218
+        },
+        {
+          "file": "empty-tasks.webp",
+          "format": "webp",
+          "width": 158,
+          "height": 145,
+          "bytes": 5582
+        },
+        {
+          "file": "empty-house.webp",
+          "format": "webp",
+          "width": 158,
+          "height": 145,
+          "bytes": 6380
+        },
+        {
+          "file": "home-icon.svg",
+          "format": "svg",
+          "width": 24,
+          "height": 24,
+          "bytes": 462
+        },
+        {
+          "file": "rules-empty.svg",
+          "format": "svg",
+          "width": 320,
+          "height": 240,
+          "bytes": 1021
+        },
+        {
+          "file": "header-decoration.svg",
+          "format": "svg",
+          "width": 1200,
+          "height": 96,
+          "bytes": 500
+        },
+        {
+          "file": "modal-decoration.svg",
+          "format": "svg",
+          "width": 1200,
+          "height": 160,
+          "bytes": 608
+        }
+      ]
+    }
+  ]
+}

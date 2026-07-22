@@ -14,7 +14,9 @@
     "test:e2e": "playwright test",
     "test": "npm run test:unit && npm run test:e2e",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "assets:inventory": "node scripts/generate-theme-asset-inventory.mjs",
+    "assets:check": "node scripts/generate-theme-asset-inventory.mjs --check"
   },
   "dependencies": {
     "lucide-react": "^1.23.0",
