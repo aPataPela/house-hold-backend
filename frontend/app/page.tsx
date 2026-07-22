@@ -7,7 +7,6 @@ import {
   ChevronDown,
   CookingPot,
   HelpCircle,
-  Home,
   KeyRound,
   Leaf,
   LogOut,
@@ -57,6 +56,7 @@ import type {
   StoredData,
 } from "@/lib/domain";
 import { displayMemberName, memberName } from "@/lib/format";
+import { EmptyState, ThemeArtwork, ThemeBackground, ThemeHomeIcon } from "@/design-system";
 
 const SESSION_KEY = "casa-viva-session";
 const DATA_KEY = "casa-viva-data";
@@ -848,8 +848,9 @@ export default function HomePage() {
 function LoadingView() {
   return (
     <div className="app-shell app-shell--surface loading-screen" role="status" aria-label="Cargando Casa Viva">
+      <ThemeBackground slot="appBackground" loading="eager" fetchPriority="high" />
       <span className="brand-mark">
-        <Home size={27} />
+        <ThemeHomeIcon state="active" size={27} />
       </span>
       <span className="loading-line" />
     </div>
@@ -871,9 +872,10 @@ function SetupView({
   const [mode, setMode] = useState<"login" | "register">("login");
   return (
     <div className="app-shell app-shell--surface setup-screen">
+      <ThemeBackground slot="authBackground" className="setup-screen__background" intensity="medium" loading="eager" fetchPriority="high" />
       <header className="auth-header">
         <span className="brand-mark">
-          <Home size={27} />
+          <ThemeHomeIcon state="active" size={27} />
         </span>
         <p className="eyebrow">Casa Viva</p>
         <h1>{mode === "login" ? "Volver a tu casa" : "Crear tu cuenta"}</h1>
@@ -979,6 +981,7 @@ function OnboardingView({
   };
   return (
     <div className="app-shell app-shell--surface setup-screen">
+      <ThemeBackground slot="onboardingBackground" className="setup-screen__background" intensity="medium" loading="eager" />
       <header className="auth-header compact-auth">
         <span className="brand-mark">
           <KeyRound size={26} />
@@ -986,6 +989,12 @@ function OnboardingView({
         <p className="eyebrow">Hola, {userName}</p>
         <h1>Elige una casa</h1>
       </header>
+      <ThemeArtwork
+        slot="onboardingHero"
+        className="setup-screen__hero"
+        alt="Una casa compartida lista para recibir a sus integrantes"
+        priority
+      />
       <div className="segmented-control" aria-label="Elegir casa">
         <button
           className={mode === "create" ? "active" : ""}
@@ -1085,7 +1094,13 @@ function HouseView({
           <span>{data.members.length}</span>
         </div>
         <div className="member-list">
-          {data.members.map((member) => (
+          {data.members.length === 0 ? (
+            <EmptyState
+              artworkSlot="houseEmpty"
+              title="Aún no hay integrantes"
+              description="Las personas de la casa aparecerán aquí."
+            />
+          ) : data.members.map((member) => (
             <div className="member-row" key={member.membershipId}>
               <span>{displayMemberName(member).slice(0, 1).toUpperCase()}</span>
               <div>
@@ -1208,18 +1223,16 @@ function ChoresSection({
   return (
     <div className="chores-section">
       {!week ? (
-        <div className="empty-state-row">
-          <p className="empty-state">No hay una semana generada.</p>
-          {canManageHouse && (
-            <button
-              className="soft-action"
-              onClick={generateWeek}
-              disabled={loading}
-            >
+        <EmptyState
+          artworkSlot="tasksEmpty"
+          title="No hay una semana generada"
+          description="Las tareas aparecerán aquí cuando exista una planificación semanal."
+          action={canManageHouse ? (
+            <button className="soft-action" onClick={generateWeek} disabled={loading}>
               Generar semana
             </button>
-          )}
-        </div>
+          ) : undefined}
+        />
       ) : (
         <div className="chore-list">
           {week.tasks.map((task) => (
