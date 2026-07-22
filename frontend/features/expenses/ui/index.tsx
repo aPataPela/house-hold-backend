@@ -156,7 +156,7 @@ export interface ExpenseListProps {
 
 export const ExpenseList = memo(function ExpenseList({ expenses }: ExpenseListProps) {
   if (expenses.length === 0) {
-    return <EmptyState title="Sin gastos" description="Aún no hay movimientos registrados para este mes." />;
+    return <EmptyState artworkSlot="expensesEmpty" title="Sin gastos" description="Aún no hay movimientos registrados para este mes." />;
   }
 
   return (
@@ -192,7 +192,7 @@ export const MonthlySettlementPanel = memo(function MonthlySettlementPanel({
   settlement,
 }: MonthlySettlementPanelProps) {
   if (!settlement) {
-    return <EmptyState title="Sin liquidación" description="Selecciona un mes para ver la liquidación mensual." />;
+    return <EmptyState artworkSlot="expensesEmpty" title="Sin liquidación" description="Selecciona un mes para ver la liquidación mensual." />;
   }
 
   return (

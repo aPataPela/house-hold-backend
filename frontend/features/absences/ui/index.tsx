@@ -323,6 +323,7 @@ export function AbsencesPage(props: AbsencesPageProps) {
               </div>
             ) : (
               <EmptyState
+                artworkSlot="absencesEmpty"
                 title="Sin impacto calculable"
                 description="Selecciona una membresía con presencia y una liquidación cargada para ver el impacto."
               />
@@ -331,6 +332,7 @@ export function AbsencesPage(props: AbsencesPageProps) {
 
           {empty ? (
             <EmptyState
+              artworkSlot="absencesEmpty"
               title="Aún no hay ausencias"
               description="Cuando registres la primera, aparecerá aquí junto con su estado y acciones."
             />
@@ -548,6 +550,7 @@ export function AbsenceList({
   if (absences.length === 0) {
     return (
       <EmptyState
+        artworkSlot="absencesEmpty"
         title="Sin ausencias registradas"
         description="La primera ausencia aparecerá aquí con su historial y acciones."
       />
@@ -632,6 +635,7 @@ export function PresenceImpactSummary({ loading, settlement, impact }: PresenceI
     return (
       <Card>
         <EmptyState
+          artworkSlot="absencesEmpty"
           title="Sin datos suficientes"
           description="Carga miembros, ausencia y liquidación para ver el impacto potencial."
         />

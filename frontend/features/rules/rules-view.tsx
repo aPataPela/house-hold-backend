@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, Plus, Scale } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import type { Category, Member, ParticipationRules, Preference, PreferenceDraft } from "@/lib/domain";
 import { dateInputValue } from "@/lib/date";
 import { displayMemberName } from "@/lib/format";
+import { EmptyState } from "@/design-system";
 
 const participationOptions = [
   { value: "1", label: "Participa" },
@@ -82,15 +83,13 @@ export function RulesView({
       )}
 
       {categories.length === 0 ? (
-        <div className="empty-illustration">
-          <Scale size={30} aria-hidden="true" />
-          <h3>Sin categorías todavía</h3>
-          <p>
-            {canManageHouse
-              ? "Crea la primera para definir el reparto."
-              : "Un administrador debe crear la primera categoría."}
-          </p>
-        </div>
+        <EmptyState
+          artworkSlot="rulesEmpty"
+          title="Sin categorías todavía"
+          description={canManageHouse
+            ? "Crea la primera para definir el reparto."
+            : "Un administrador debe crear la primera categoría."}
+        />
       ) : (
         <>
           <label className="category-picker">
