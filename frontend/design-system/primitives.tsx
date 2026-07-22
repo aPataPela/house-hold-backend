@@ -71,7 +71,11 @@ export const Button = memo(
         className={cx("ds-button", className)}
         {...props}
       >
-        {loading ? <span className="ds-button__spinner" aria-hidden="true" /> : leadingIcon}
+        {loading ? (
+          <span className="ds-button__spinner" aria-hidden="true" />
+        ) : (
+          leadingIcon
+        )}
         <span>{children}</span>
         {!loading && trailingIcon}
       </button>
@@ -198,14 +202,26 @@ interface FieldState {
   required?: boolean;
 }
 
-export interface FormFieldProps extends HTMLAttributes<HTMLDivElement>, FieldState {
+export interface FormFieldProps
+  extends HTMLAttributes<HTMLDivElement>, FieldState {
   id?: string;
   children: ReactNode;
 }
 
 export const FormField = memo(
   forwardRef<HTMLDivElement, FormFieldProps>(function FormField(
-    { id, label, hint, error, success, loading, required, children, className, ...props },
+    {
+      id,
+      label,
+      hint,
+      error,
+      success,
+      loading,
+      required,
+      children,
+      className,
+      ...props
+    },
     ref,
   ) {
     const generatedId = useId();
@@ -224,8 +240,12 @@ export const FormField = memo(
             ? (children as (fieldId: string) => ReactNode)(fieldId)
             : children}
           {error ? <div className="ds-field-error">{error}</div> : null}
-          {!error && success ? <div className="ds-field-hint">{success}</div> : null}
-          {!error && !success && hint ? <div className="ds-field-hint">{hint}</div> : null}
+          {!error && success ? (
+            <div className="ds-field-hint">{success}</div>
+          ) : null}
+          {!error && !success && hint ? (
+            <div className="ds-field-hint">{hint}</div>
+          ) : null}
         </div>
       </div>
     );
@@ -233,7 +253,8 @@ export const FormField = memo(
 );
 FormField.displayName = "FormField";
 
-export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement>, FieldState {
+export interface TextFieldProps
+  extends InputHTMLAttributes<HTMLInputElement>, FieldState {
   leadingIcon?: ReactNode;
   trailingIcon?: ReactNode;
 }
@@ -258,7 +279,14 @@ export const TextField = memo(
     const generatedId = useId();
     const fieldId = id ?? generatedId;
     return (
-      <FormField id={fieldId} label={label} hint={hint} error={error} success={success} loading={loading}>
+      <FormField
+        id={fieldId}
+        label={label}
+        hint={hint}
+        error={error}
+        success={success}
+        loading={loading}
+      >
         <div style={{ display: "grid", gap: "var(--ds-space-2)" }}>
           {leadingIcon || trailingIcon ? (
             <div
@@ -269,7 +297,9 @@ export const TextField = memo(
                 alignItems: "center",
               }}
             >
-              {leadingIcon ? <span aria-hidden="true">{leadingIcon}</span> : null}
+              {leadingIcon ? (
+                <span aria-hidden="true">{leadingIcon}</span>
+              ) : null}
               <input
                 ref={ref}
                 id={fieldId}
@@ -279,7 +309,9 @@ export const TextField = memo(
                 className={cx("ds-input", className)}
                 {...props}
               />
-              {trailingIcon ? <span aria-hidden="true">{trailingIcon}</span> : null}
+              {trailingIcon ? (
+                <span aria-hidden="true">{trailingIcon}</span>
+              ) : null}
             </div>
           ) : (
             <input
@@ -301,19 +333,39 @@ TextField.displayName = "TextField";
 
 type SelectOption = { value: string; label: string; disabled?: boolean };
 
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement>, FieldState {
+export interface SelectProps
+  extends SelectHTMLAttributes<HTMLSelectElement>, FieldState {
   options: SelectOption[];
 }
 
 export const Select = memo(
   forwardRef<HTMLSelectElement, SelectProps>(function Select(
-    { id, label, hint, error, success, loading, options, className, disabled, children, ...props },
+    {
+      id,
+      label,
+      hint,
+      error,
+      success,
+      loading,
+      options,
+      className,
+      disabled,
+      children,
+      ...props
+    },
     ref,
   ) {
     const generatedId = useId();
     const fieldId = id ?? generatedId;
     return (
-      <FormField id={fieldId} label={label} hint={hint} error={error} success={success} loading={loading}>
+      <FormField
+        id={fieldId}
+        label={label}
+        hint={hint}
+        error={error}
+        success={success}
+        loading={loading}
+      >
         <div style={{ position: "relative" }}>
           <select
             ref={ref}
@@ -326,7 +378,11 @@ export const Select = memo(
           >
             {children}
             {options.map((option) => (
-              <option key={option.value} value={option.value} disabled={option.disabled}>
+              <option
+                key={option.value}
+                value={option.value}
+                disabled={option.disabled}
+              >
                 {option.label}
               </option>
             ))}
@@ -350,7 +406,8 @@ export const Select = memo(
 );
 Select.displayName = "Select";
 
-export interface DateFieldProps extends InputHTMLAttributes<HTMLInputElement>, FieldState {}
+export interface DateFieldProps
+  extends InputHTMLAttributes<HTMLInputElement>, FieldState {}
 
 export const DateField = memo(
   forwardRef<HTMLInputElement, DateFieldProps>(function DateField(
@@ -360,7 +417,14 @@ export const DateField = memo(
     const generatedId = useId();
     const fieldId = id ?? generatedId;
     return (
-      <FormField id={fieldId} label={label} hint={hint} error={error} success={success} loading={loading}>
+      <FormField
+        id={fieldId}
+        label={label}
+        hint={hint}
+        error={error}
+        success={success}
+        loading={loading}
+      >
         <input
           ref={ref}
           id={fieldId}
@@ -383,7 +447,10 @@ export interface TabItem {
   disabled?: boolean;
 }
 
-export interface TabsProps extends Omit<HTMLAttributes<HTMLDivElement>, "onChange"> {
+export interface TabsProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "onChange"
+> {
   value: string;
   onValueChange: (value: string) => void;
   tabs: TabItem[];
@@ -404,7 +471,8 @@ export const Tabs = memo(
       const nextIndex =
         currentIndex === -1
           ? 0
-          : (currentIndex + direction + enabledTabs.length) % enabledTabs.length;
+          : (currentIndex + direction + enabledTabs.length) %
+            enabledTabs.length;
       onValueChange(enabledTabs[nextIndex].value);
       tabRefs.current[nextIndex]?.focus();
     }
@@ -462,7 +530,12 @@ export const Badge = memo(
     ref,
   ) {
     return (
-      <span ref={ref} data-tone={tone} className={cx("ds-badge", className)} {...props}>
+      <span
+        ref={ref}
+        data-tone={tone}
+        className={cx("ds-badge", className)}
+        {...props}
+      >
         {children}
       </span>
     );
@@ -540,7 +613,14 @@ export const Modal = memo(function Modal({
         aria-label={closeLabel}
         onClick={onClose}
       />
-      <div ref={panelRef as never} className="ds-modal__panel" role="dialog" aria-modal="true" aria-labelledby="ds-modal-title" aria-describedby={description ? "ds-modal-description" : undefined}>
+      <div
+        ref={panelRef as never}
+        className="ds-modal__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ds-modal-title"
+        aria-describedby={description ? "ds-modal-description" : undefined}
+      >
         <div className="ds-modal__header">
           <div>
             <div id="ds-modal-title" className="ds-modal__title">
@@ -552,7 +632,11 @@ export const Modal = memo(function Modal({
               </div>
             ) : null}
           </div>
-          <IconButton icon={<X size={18} />} label={closeLabel} onClick={onClose} />
+          <IconButton
+            icon={<X size={18} />}
+            label={closeLabel}
+            onClick={onClose}
+          />
         </div>
         <div className="ds-modal__body">{children}</div>
         {footer ? <div className="ds-modal__footer">{footer}</div> : null}
@@ -628,7 +712,11 @@ export const Drawer = memo(function Drawer({
               </div>
             ) : null}
           </div>
-          <IconButton icon={<X size={18} />} label={closeLabel} onClick={onClose} />
+          <IconButton
+            icon={<X size={18} />}
+            label={closeLabel}
+            onClick={onClose}
+          />
         </div>
         <div className="ds-drawer__body">{children}</div>
         {footer ? <div className="ds-drawer__footer">{footer}</div> : null}
@@ -651,7 +739,7 @@ export const Toast = memo(
     { tone = "info", title, description, action, className, ...props },
     ref,
   ) {
-  const icon =
+    const icon =
       tone === "success" ? (
         <CircleCheck size={18} />
       ) : tone === "warning" ? (
@@ -680,12 +768,17 @@ export const Toast = memo(
         className={cx("ds-toast", className)}
         {...props}
       >
-        <div aria-hidden="true" style={{ color: toneColor, marginTop: "0.1rem" }}>
+        <div
+          aria-hidden="true"
+          style={{ color: toneColor, marginTop: "0.1rem" }}
+        >
           {icon}
         </div>
         <div style={{ display: "grid", gap: "var(--ds-space-1)" }}>
           <strong>{title}</strong>
-          {description ? <div className="ds-field-hint">{description}</div> : null}
+          {description ? (
+            <div className="ds-field-hint">{description}</div>
+          ) : null}
         </div>
         {action ? <div>{action}</div> : null}
       </div>
@@ -702,7 +795,14 @@ export interface SkeletonProps extends HTMLAttributes<HTMLDivElement> {
 
 export const Skeleton = memo(
   forwardRef<HTMLDivElement, SkeletonProps>(function Skeleton(
-    { width = "100%", height = 16, radius = "var(--ds-radius-2)", className, style, ...props },
+    {
+      width = "100%",
+      height = 16,
+      radius = "var(--ds-radius-2)",
+      className,
+      style,
+      ...props
+    },
     ref,
   ) {
     return (
@@ -727,7 +827,10 @@ export interface BottomNavigationItem {
   disabled?: boolean;
 }
 
-export interface BottomNavigationProps extends Omit<HTMLAttributes<HTMLElement>, "onChange"> {
+export interface BottomNavigationProps extends Omit<
+  HTMLAttributes<HTMLElement>,
+  "onChange"
+> {
   value: string;
   items: BottomNavigationItem[];
   onChange?: (value: string) => void;
@@ -739,19 +842,28 @@ export const BottomNavigation = memo(
     ref,
   ) {
     return (
-      <nav ref={ref} className={cx("ds-bottom-navigation", className)} {...props}>
+      <nav
+        ref={ref}
+        className={cx("ds-bottom-navigation", className)}
+        {...props}
+      >
         <div className="ds-bottom-navigation__items">
           {items.map((item) => {
             const active = item.value === value;
-            const icon = typeof item.icon === "function" ? item.icon(active) : item.icon;
+            const icon =
+              typeof item.icon === "function" ? item.icon(active) : item.icon;
             const common = {
               "data-active": active ? "true" : undefined,
+              "aria-current": active ? ("page" as const) : undefined,
               className: "ds-bottom-navigation__item",
               children: (
                 <>
                   <span aria-hidden="true">{icon}</span>
                   <span>{item.label}</span>
-                  <span className="ds-bottom-navigation__item-indicator" aria-hidden="true" />
+                  <span
+                    className="ds-bottom-navigation__item-indicator"
+                    aria-hidden="true"
+                  />
                 </>
               ),
             } as const;
@@ -761,7 +873,6 @@ export const BottomNavigation = memo(
                 <a
                   key={item.value}
                   href={item.href}
-                  aria-current={active ? "page" : undefined}
                   aria-disabled={item.disabled || undefined}
                   {...common}
                 />
