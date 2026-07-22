@@ -22,7 +22,13 @@ const configuredDevOrigins = (process.env.NEXT_ALLOWED_DEV_ORIGINS ?? "")
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   allowedDevOrigins: [
-    ...new Set([...localNetworkOrigins, ...configuredDevOrigins]),
+    ...new Set([
+      "127.0.0.1",
+      "localhost",
+      "0.0.0.0",
+      ...localNetworkOrigins,
+      ...configuredDevOrigins,
+    ]),
   ],
   async rewrites() {
     return [

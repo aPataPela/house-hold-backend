@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type CSSProperties,
@@ -135,24 +136,37 @@ export function ThemeProvider({
     () => new ThemeService({ registry, storageKey }),
     [registry, storageKey],
   );
-  const [preference, setPreference] = useState<ThemePreference | null>(() => {
-    const storedPreference = service.readPreference();
-    return (
-      storedPreference ?? {
-        houseThemeId,
-        personalThemeId: initialPersonalThemeId,
-        reducedTransparency,
-      }
-    );
+  const [preference, setPreference] = useState<ThemePreference | null>({
+    houseThemeId,
+    personalThemeId: initialPersonalThemeId,
+    reducedTransparency,
   });
+  const [hydrated, setHydrated] = useState(false);
+  const [systemReducedTransparency, setSystemReducedTransparency] = useState(false);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- Browser preferences are an external store hydrated before paint. */
+  useLayoutEffect(() => {
+    const storedPreference = service.readPreference();
+    if (storedPreference) {
+      setPreference(storedPreference);
+    }
+
+    const query = window.matchMedia("(prefers-reduced-transparency: reduce)");
+    const updateTransparency = () => setSystemReducedTransparency(query.matches);
+    updateTransparency();
+    query.addEventListener("change", updateTransparency);
+    setHydrated(true);
+    return () => query.removeEventListener("change", updateTransparency);
+  }, [service]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const theme = service.resolveTheme(preference);
   const themeVariables = useMemo(() => toThemeCssVariables(theme), [theme]);
-  const resolvedReducedTransparency = service.resolveReducedTransparency(preference);
+  const resolvedReducedTransparency = systemReducedTransparency || (preference?.reducedTransparency ?? false);
   const activeThemeId = theme.metadata.id;
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (!hydrated || typeof window === "undefined") {
       return;
     }
     service.savePreference({
@@ -160,7 +174,7 @@ export function ThemeProvider({
       personalThemeId: preference?.personalThemeId ?? initialPersonalThemeId ?? null,
       reducedTransparency: preference?.reducedTransparency ?? reducedTransparency,
     });
-  }, [houseThemeId, initialPersonalThemeId, preference, reducedTransparency, service]);
+  }, [houseThemeId, hydrated, initialPersonalThemeId, preference, reducedTransparency, service]);
 
   useEffect(() => {
     applyThemeToDocument(theme, resolvedReducedTransparency, themeVariables as Record<`--${string}`, string | number>);
