@@ -18,6 +18,19 @@ describe("theme identity visual page", () => {
     localStorage.clear();
     back.mockClear();
     push.mockClear();
+    class LoadedImage {
+      onload: null | (() => void) = null;
+      onerror: null | (() => void) = null;
+      decoding = "async";
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    Object.defineProperty(globalThis, "Image", {
+      configurable: true,
+      value: LoadedImage,
+    });
   });
 
   it("previews changes immediately and only persists after apply", async () => {
