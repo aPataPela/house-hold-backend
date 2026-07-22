@@ -13,6 +13,8 @@ import {
   Select,
 } from "./primitives";
 import { cx } from "./utils";
+import { ThemeArtwork } from "./theme/theme-visuals";
+import type { ThemeEmptyStateSlot } from "./theme/theme-assets";
 
 export { FormField } from "./primitives";
 
@@ -231,6 +233,8 @@ interface StateCardProps extends HTMLAttributes<HTMLDivElement> {
   description?: string;
   action?: ReactNode;
   illustration?: ReactNode;
+  artworkSlot?: ThemeEmptyStateSlot;
+  artworkPriority?: boolean;
 }
 
 export const EmptyState = memo(function EmptyState({
@@ -238,12 +242,18 @@ export const EmptyState = memo(function EmptyState({
   description,
   action,
   illustration,
+  artworkSlot,
+  artworkPriority = false,
   className,
 }: StateCardProps) {
   return (
     <Card className={cx("ds-empty-state", className)} padding="lg">
       <div className="ds-empty-state__icon" aria-hidden="true">
-        {illustration ?? <Search size={22} />}
+        {illustration ?? (artworkSlot ? (
+          <ThemeArtwork slot={artworkSlot} decorative priority={artworkPriority} />
+        ) : (
+          <Search size={22} />
+        ))}
       </div>
       <div style={{ display: "grid", gap: "var(--ds-space-2)" }}>
         <strong>{title}</strong>
