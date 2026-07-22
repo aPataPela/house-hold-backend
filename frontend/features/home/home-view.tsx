@@ -1,7 +1,20 @@
 "use client";
 
-import { ArrowUpRight, CalendarOff, House, Plus, ReceiptText, Scale, Sparkles } from "lucide-react";
-import { Badge, Button, Card, EmptyState } from "@/design-system";
+import {
+  ArrowUpRight,
+  CalendarOff,
+  House,
+  Plus,
+  ReceiptText,
+  Scale,
+} from "lucide-react";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ThemeBackground,
+} from "@/design-system";
 import type { HomeQuickActionId, HomeViewModel } from "./application";
 
 export interface HomeViewProps {
@@ -34,10 +47,16 @@ export function HomeView({
   if (viewModel.emptyState) {
     return (
       <EmptyState
+        artworkSlot="houseEmpty"
+        artworkPriority
         title="Aún no hay actividad"
         description="Cuando existan gastos, ausencias o tareas, este tablero mostrará la convivencia mensual."
         action={
-          <Button type="button" leadingIcon={<Plus size={16} />} onClick={onOpenExpense}>
+          <Button
+            type="button"
+            leadingIcon={<Plus size={16} />}
+            onClick={onOpenExpense}
+          >
             Registrar gasto
           </Button>
         }
@@ -53,27 +72,46 @@ export function HomeView({
       </div>
 
       <section className="home-hero">
-        <div className="home-hero-copy">
+        <ThemeBackground
+          slot="homeHero"
+          mode="hero"
+          intensity="strong"
+          loading="eager"
+          fetchPriority="high"
+        />
+        <div className="home-hero-copy ds-glass-surface">
           <span className="home-hero-badge">Convivencia activa</span>
           <h3>{viewModel.heroDescription}</h3>
-          <p>La información se entrega ya calculada por las consultas del sistema.</p>
+          <p>
+            La información se entrega ya calculada por las consultas del
+            sistema.
+          </p>
           <div className="home-hero-actions">
-            <button type="button" className="primary-action" onClick={onOpenExpense}>
+            <button
+              type="button"
+              className="primary-action"
+              onClick={onOpenExpense}
+            >
               <Plus size={18} /> Registrar gasto
             </button>
-            <button className="soft-action" type="button" onClick={onGoToAbsences}>
+            <button
+              className="soft-action"
+              type="button"
+              onClick={onGoToAbsences}
+            >
               <CalendarOff size={18} /> Ver ausencias
             </button>
           </div>
-        </div>
-        <div className="home-hero-orb" aria-hidden="true">
-          <Sparkles size={34} />
         </div>
       </section>
 
       <div className="home-grid">
         {viewModel.summaryMetrics.map((metric, index) => (
-          <Card key={`${metric.label}-${index}`} padding="md" elevated={index === 0}>
+          <Card
+            key={`${metric.label}-${index}`}
+            padding="md"
+            elevated={index === 0}
+          >
             <div className="home-card-head">
               <span>{metric.label}</span>
               {index === 0 ? <Scale size={18} aria-hidden="true" /> : null}
@@ -87,12 +125,24 @@ export function HomeView({
       <div className="metric-grid">
         {viewModel.presence.map((metric, index) => (
           <Card key={`${metric.label}-${index}`} padding="md">
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--ds-space-2)" }}>
-              {index === 0 ? <House size={20} aria-hidden="true" /> : <ReceiptText size={20} aria-hidden="true" />}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--ds-space-2)",
+              }}
+            >
+              {index === 0 ? (
+                <House size={20} aria-hidden="true" />
+              ) : (
+                <ReceiptText size={20} aria-hidden="true" />
+              )}
               <span>{metric.label}</span>
             </div>
             <strong>{metric.value}</strong>
-            {metric.helperText ? <p className="ds-field-hint">{metric.helperText}</p> : null}
+            {metric.helperText ? (
+              <p className="ds-field-hint">{metric.helperText}</p>
+            ) : null}
           </Card>
         ))}
       </div>
@@ -102,7 +152,12 @@ export function HomeView({
       </div>
       <div className="home-quick-actions">
         {viewModel.quickActions.map((action) => (
-          <button key={action.id} type="button" className="home-quick-action" onClick={actionMap[action.id]}>
+          <button
+            key={action.id}
+            type="button"
+            className="home-quick-action"
+            onClick={actionMap[action.id]}
+          >
             <div>
               <strong>{action.label}</strong>
               <p className="ds-field-hint">{action.description}</p>
@@ -131,13 +186,19 @@ export function HomeView({
                     <p className="ds-field-hint">{expense.subtitle}</p>
                   </div>
                   <div style={{ display: "grid", justifyItems: "end" }}>
-                    <Badge tone={expense.statusTone}>{expense.statusLabel}</Badge>
+                    <Badge tone={expense.statusTone}>
+                      {expense.statusLabel}
+                    </Badge>
                     <strong>{expense.amountLabel}</strong>
                   </div>
                 </article>
               ))
             ) : (
-              <EmptyState title="Sin gastos recientes" description="Registra el primer movimiento del mes." />
+              <EmptyState
+                artworkSlot="expensesEmpty"
+                title="Sin gastos recientes"
+                description="Registra el primer movimiento del mes."
+              />
             )}
           </div>
         </Card>
@@ -161,7 +222,11 @@ export function HomeView({
                 </article>
               ))
             ) : (
-              <EmptyState title="Sin próximas ausencias" description="La casa no tiene ausencias activas cercanas." />
+              <EmptyState
+                artworkSlot="absencesEmpty"
+                title="Sin próximas ausencias"
+                description="La casa no tiene ausencias activas cercanas."
+              />
             )}
           </div>
         </Card>
@@ -187,7 +252,11 @@ export function HomeView({
                 </article>
               ))
             ) : (
-              <EmptyState title="Sin tareas disponibles" description="Todavía no hay asignaciones semanales activas." />
+              <EmptyState
+                artworkSlot="tasksEmpty"
+                title="Sin tareas disponibles"
+                description="Todavía no hay asignaciones semanales activas."
+              />
             )}
           </div>
         </Card>
@@ -207,11 +276,19 @@ export function HomeView({
                     <strong>{movement.title}</strong>
                     <p className="ds-field-hint">{movement.subtitle}</p>
                   </div>
-                  {movement.valueLabel ? <strong>{movement.valueLabel}</strong> : <Badge tone="neutral">Info</Badge>}
+                  {movement.valueLabel ? (
+                    <strong>{movement.valueLabel}</strong>
+                  ) : (
+                    <Badge tone="neutral">Info</Badge>
+                  )}
                 </article>
               ))
             ) : (
-              <EmptyState title="Sin movimientos recientes" description="Este mes todavía no hay actividad." />
+              <EmptyState
+                artworkSlot="expensesEmpty"
+                title="Sin movimientos recientes"
+                description="Este mes todavía no hay actividad."
+              />
             )}
           </div>
         </Card>
