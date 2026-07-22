@@ -38,7 +38,7 @@ const brokenRegistry = new ThemeRegistry(
             ...definition.assets.hero,
             themePreview: {
               ...definition.assets.hero?.themePreview,
-              src: "/themes/patagonia/missing-preview.svg",
+              src: "/assets/themes/patagonia/missing-preview.webp",
             },
           },
         },

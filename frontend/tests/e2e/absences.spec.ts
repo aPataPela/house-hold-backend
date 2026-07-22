@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test";
 test("happy path: create own absence", async ({ page }) => {
   await page.goto("/absences-demo?scenario=happy");
 
-  await expect(page.getByText(/ausencia guardada/i)).toBeVisible();
-  await expect(page.getByText(/vacaciones/i)).toBeVisible();
+  await expect(page.getByRole("status").getByText(/ausencia guardada/i)).toBeVisible();
+  await expect(page.getByText(/vacaciones/i).first()).toBeVisible();
 });
 
 test("no permission: member cannot manage another person's absence", async ({ page }) => {
@@ -19,6 +19,6 @@ test("no permission: member cannot manage another person's absence", async ({ pa
 test("date conflict: overlapping absence is blocked", async ({ page }) => {
   await page.goto("/absences-demo?scenario=conflict");
 
-  await expect(page.getByText(/conflicto de fechas/i)).toBeVisible();
-  await expect(page.getByText(/viaje corto/i)).toBeVisible();
+  await expect(page.getByRole("status").getByText(/conflicto de fechas/i)).toBeVisible();
+  await expect(page.getByText(/viaje corto/i).first()).toBeVisible();
 });
