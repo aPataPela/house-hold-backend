@@ -100,6 +100,7 @@ export interface BackgroundTreatmentTokens {
   imageOpacity: string;
   imageOpacityMedium: string;
   imageOpacityStrong: string;
+  decorationOpacity: string;
 }
 
 export interface ElevationTokens {
@@ -212,6 +213,7 @@ export interface ThemeComponentTokens {
   bottomNavigation: {
     background: string;
     border: string;
+    activeBackground: string;
     itemActive: string;
     itemInactive: string;
     indicator: string;

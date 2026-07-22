@@ -34,6 +34,11 @@ export function AppShell({
     <div className="app-shell">
       <ThemeBackground slot="appBackground" className="app-shell__background" loading="eager" fetchPriority="high" />
       <header className="app-shell__header ds-glass-surface">
+        <ThemeArtwork
+          slot="headerDecoration"
+          decorative
+          className="app-shell__header-decoration"
+        />
         <div className="app-shell__header-copy">
           <p className="eyebrow">{session.householdName ?? "Shared Household"}</p>
           <h1>{session.currentUserName}</h1>
@@ -67,12 +72,12 @@ export function AppShell({
             {
               value: "home",
               label: "Inicio",
-              icon: (active) => <ThemeHomeIcon state={active ? "active" : "inactive"} size={20} />,
+              icon: (active) => <ThemeHomeIcon state={active ? "active" : "inactive"} size={22} />,
             },
-            { value: "expenses", label: "Gastos", icon: <FunctionalIcon name="gastos" size={20} /> },
-            { value: "rules", label: "Reglas", icon: <FunctionalIcon name="reglas" size={20} /> },
-            { value: "absences", label: "Ausencias", icon: <FunctionalIcon name="ausencia" size={20} /> },
-            { value: "house", label: "Casa", icon: <FunctionalIcon name="casa" size={20} /> },
+            { value: "expenses", label: "Gastos", icon: <FunctionalIcon name="gastos" size={22} /> },
+            { value: "rules", label: "Reglas", icon: <FunctionalIcon name="reglas" size={22} /> },
+            { value: "absences", label: "Ausencias", icon: <FunctionalIcon name="ausencia" size={22} /> },
+            { value: "house", label: "Casa", icon: <FunctionalIcon name="casa" size={22} /> },
           ]}
         />
       </footer>
