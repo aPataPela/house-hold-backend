@@ -14,11 +14,37 @@ export type ThemeAssetScope = "thumbnail" | "essential" | "all";
 
 const assetCache = new Map<string, Promise<void>>();
 
+export const requiredThemeAssetSlots: readonly ThemeAssetSlot[] = [
+  "appBackground",
+  "authBackground",
+  "onboardingBackground",
+  "homeBackground",
+  "onboardingHero",
+  "homeHero",
+  "themePreview",
+  "expensesEmpty",
+  "absencesEmpty",
+  "tasksEmpty",
+  "houseEmpty",
+  "rulesEmpty",
+  "footerDecoration",
+  "headerDecoration",
+  "modalDecoration",
+  "subtlePattern",
+  "homeIcon",
+];
+
 export class AssetRegistry {
   constructor(
     private readonly registry: ThemeRegistry = defaultThemeRegistry,
     private readonly fallbackThemeId: ThemeId = "patagonia",
-  ) {}
+  ) {
+    if (process.env.NODE_ENV !== "production") {
+      for (const entry of registry.list()) {
+        validateThemeAssets(entry.definition);
+      }
+    }
+  }
 
   resolve(themeId: ThemeId, slot: ThemeAssetSlot): ThemeAssetResource | null {
     const primary = this.registry.get(themeId);
@@ -30,13 +56,23 @@ export class AssetRegistry {
     );
   }
 
-  preload(themeId: ThemeId, scope: AssetScopeInput = "essential"): Promise<void[]> {
+  preload(
+    themeId: ThemeId,
+    scope: AssetScopeInput = "essential",
+  ): Promise<void[]> {
     const slots = resolveScope(scope);
-    return Promise.all(slots.map((slot) => preloadThemeAsset(this.resolve(themeId, slot))));
+    return Promise.all(
+      slots.map((slot) => preloadThemeAsset(this.resolve(themeId, slot))),
+    );
   }
 
-  preloadThemes(themeIds: ThemeId[], scope: AssetScopeInput = "thumbnail"): Promise<void[]> {
-    return Promise.all(themeIds.map((themeId) => this.preload(themeId, scope))).then((results) => results.flat());
+  preloadThemes(
+    themeIds: ThemeId[],
+    scope: AssetScopeInput = "thumbnail",
+  ): Promise<void[]> {
+    return Promise.all(
+      themeIds.map((themeId) => this.preload(themeId, scope)),
+    ).then((results) => results.flat());
   }
 }
 
@@ -56,7 +92,9 @@ export function resolveThemeAsset(
   );
 }
 
-export function preloadThemeAsset(asset: ThemeAssetResource | null): Promise<void> {
+export function preloadThemeAsset(
+  asset: ThemeAssetResource | null,
+): Promise<void> {
   if (!asset || typeof window === "undefined" || !asset.src) {
     return Promise.resolve();
   }
@@ -67,10 +105,14 @@ export function preloadThemeAsset(asset: ThemeAssetResource | null): Promise<voi
   const promise = new Promise<void>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve();
-    image.onerror = () => reject(new Error(`Failed to load asset: ${asset.src}`));
+    image.onerror = () =>
+      reject(new Error(`Failed to load asset: ${asset.src}`));
     image.decoding = asset.loading === "eager" ? "sync" : "async";
     image.src = asset.src;
-  }).catch(() => undefined);
+  }).catch((error: unknown) => {
+    assetCache.delete(asset.src);
+    throw error;
+  });
   assetCache.set(asset.src, promise);
   return promise;
 }
@@ -93,44 +135,16 @@ function resolveScope(scope: AssetScopeInput): ThemeAssetSlot[] {
   }
 
   if (scope === "all") {
-    return [
-      "appBackground",
-      "authBackground",
-      "onboardingBackground",
-      "homeBackground",
-      "onboardingHero",
-      "homeHero",
-      "themePreview",
-      "expensesEmpty",
-      "absencesEmpty",
-      "tasksEmpty",
-      "houseEmpty",
-      "rulesEmpty",
-      "footerDecoration",
-      "headerDecoration",
-      "modalDecoration",
-      "subtlePattern",
-      "homeIcon",
-    ];
+    return [...requiredThemeAssetSlots];
   }
 
-  return [
-    "appBackground",
-    "authBackground",
-    "onboardingBackground",
-    "homeBackground",
-    "onboardingHero",
-    "homeHero",
-    "themePreview",
-    "footerDecoration",
-    "headerDecoration",
-    "modalDecoration",
-    "subtlePattern",
-    "homeIcon",
-  ];
+  return ["appBackground", "homeHero", "footerDecoration", "homeIcon"];
 }
 
-function resolveFromTheme(theme: ThemeDefinition, slot: ThemeAssetSlot): ThemeAssetResource | null {
+function resolveFromTheme(
+  theme: ThemeDefinition,
+  slot: ThemeAssetSlot,
+): ThemeAssetResource | null {
   const assets = theme.assets;
   switch (slot) {
     case "appBackground":
@@ -161,5 +175,29 @@ function resolveFromTheme(theme: ThemeDefinition, slot: ThemeAssetSlot): ThemeAs
 }
 
 function resourceFromLegacyIcon(src: string): ThemeAssetResource {
-  return { src, alt: "Icono de inicio", width: 64, height: 64 };
+  return {
+    src,
+    format: "svg",
+    alt: "Inicio",
+    decorative: false,
+    width: 24,
+    height: 24,
+    loading: "eager",
+    fetchPriority: "high",
+    preload: true,
+    objectFit: "contain",
+    objectPosition: "center",
+    objectPositionNarrow: "center",
+  };
+}
+
+export function validateThemeAssets(theme: ThemeDefinition): void {
+  const missing = requiredThemeAssetSlots.filter(
+    (slot) => !resolveFromTheme(theme, slot)?.src,
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `Theme "${theme.metadata.id}" is missing required asset slots: ${missing.join(", ")}`,
+    );
+  }
 }

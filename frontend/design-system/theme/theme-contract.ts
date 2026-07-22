@@ -83,6 +83,7 @@ export interface SemanticColors {
 
 export interface GlassTokens {
   tint: string;
+  opacity: string;
   background: string;
   border: string;
   shadow: string;
@@ -91,6 +92,14 @@ export interface GlassTokens {
   saturation: string;
   fallbackBackground: string;
   fallbackBorder: string;
+}
+
+export interface BackgroundTreatmentTokens {
+  overlay: string;
+  heroOverlay: string;
+  imageOpacity: string;
+  imageOpacityMedium: string;
+  imageOpacityStrong: string;
 }
 
 export interface ElevationTokens {
@@ -230,6 +239,7 @@ export interface ThemeDefinition {
   primitiveTokens: PrimitiveTokens;
   semanticColors: SemanticColors;
   glass: GlassTokens;
+  backgroundTreatment: BackgroundTreatmentTokens;
   dataVisualization?: DataVisualizationTokens;
   elevation: ElevationTokens;
   typography: TypographyTokens;
@@ -238,7 +248,8 @@ export interface ThemeDefinition {
   components: ThemeComponentTokens;
 }
 
-export type ThemeVariables = CSSProperties & Record<`--${string}`, string | number>;
+export type ThemeVariables = CSSProperties &
+  Record<`--${string}`, string | number>;
 
 export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
   const vars: Record<string, string | number> = {
@@ -267,7 +278,9 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
     }
   }
   if (theme.primitiveTokens.color.primary) {
-    for (const [step, token] of Object.entries(theme.primitiveTokens.color.primary)) {
+    for (const [step, token] of Object.entries(
+      theme.primitiveTokens.color.primary,
+    )) {
       vars[`--ds-color-brand-${step}`] = token;
     }
   }
@@ -280,19 +293,29 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
     vars[`--ds-radius-${step}`] = token;
   }
 
-  for (const [name, token] of Object.entries(theme.primitiveTokens.typography.family)) {
+  for (const [name, token] of Object.entries(
+    theme.primitiveTokens.typography.family,
+  )) {
     vars[`--ds-font-${name}`] = token;
   }
-  for (const [step, token] of Object.entries(theme.primitiveTokens.typography.size)) {
+  for (const [step, token] of Object.entries(
+    theme.primitiveTokens.typography.size,
+  )) {
     vars[`--ds-font-size-${step}`] = token;
   }
-  for (const [step, token] of Object.entries(theme.primitiveTokens.typography.lineHeight)) {
+  for (const [step, token] of Object.entries(
+    theme.primitiveTokens.typography.lineHeight,
+  )) {
     vars[`--ds-line-height-${step}`] = token;
   }
-  for (const [step, token] of Object.entries(theme.primitiveTokens.typography.weight)) {
+  for (const [step, token] of Object.entries(
+    theme.primitiveTokens.typography.weight,
+  )) {
     vars[`--ds-font-weight-${step}`] = token;
   }
-  for (const [step, token] of Object.entries(theme.primitiveTokens.typography.letterSpacing)) {
+  for (const [step, token] of Object.entries(
+    theme.primitiveTokens.typography.letterSpacing,
+  )) {
     vars[`--ds-letter-spacing-${step}`] = token;
   }
 
@@ -308,7 +331,9 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
     vars[`--ds-shadow-${step}`] = token;
   }
 
-  for (const [section, values] of Object.entries(theme.primitiveTokens.motion)) {
+  for (const [section, values] of Object.entries(
+    theme.primitiveTokens.motion,
+  )) {
     for (const [step, token] of Object.entries(values)) {
       vars[`--ds-motion-${section}-${step}`] = token;
     }
@@ -318,14 +343,23 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
     vars[`--ds-${toKebab(key)}`] = token;
   }
   if (theme.semanticColors.pageBackground) {
-    vars["--ds-background-page"] = theme.semanticColors.backgroundPage ?? theme.semanticColors.pageBackground;
-    vars["--ds-background-surface"] = theme.semanticColors.backgroundSurface ?? theme.semanticColors.surface;
-    vars["--ds-background-glass"] = theme.semanticColors.backgroundGlass ?? theme.semanticColors.glassSurface;
-    vars["--ds-background-elevated"] = theme.semanticColors.backgroundElevated ?? theme.semanticColors.elevatedSurface;
+    vars["--ds-background-page"] =
+      theme.semanticColors.backgroundPage ??
+      theme.semanticColors.pageBackground;
+    vars["--ds-background-surface"] =
+      theme.semanticColors.backgroundSurface ?? theme.semanticColors.surface;
+    vars["--ds-background-glass"] =
+      theme.semanticColors.backgroundGlass ?? theme.semanticColors.glassSurface;
+    vars["--ds-background-elevated"] =
+      theme.semanticColors.backgroundElevated ??
+      theme.semanticColors.elevatedSurface;
   }
 
   for (const [key, token] of Object.entries(theme.glass)) {
     vars[`--ds-glass-${toKebab(key)}`] = token;
+  }
+  for (const [key, token] of Object.entries(theme.backgroundTreatment)) {
+    vars[`--ds-background-treatment-${toKebab(key)}`] = token;
   }
   if (theme.dataVisualization) {
     for (const [key, token] of Object.entries(theme.dataVisualization)) {
@@ -353,7 +387,9 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
   for (const [key, token] of Object.entries(theme.components.button.primary)) {
     vars[`--ds-button-primary-${toKebab(key)}`] = token;
   }
-  for (const [key, token] of Object.entries(theme.components.button.secondary)) {
+  for (const [key, token] of Object.entries(
+    theme.components.button.secondary,
+  )) {
     vars[`--ds-button-secondary-${toKebab(key)}`] = token;
   }
   for (const [key, token] of Object.entries(theme.components.button.danger)) {
@@ -368,7 +404,9 @@ export function toThemeCssVariables(theme: ThemeDefinition): ThemeVariables {
   for (const [key, token] of Object.entries(theme.components.modal)) {
     vars[`--ds-modal-${toKebab(key)}`] = token;
   }
-  for (const [key, token] of Object.entries(theme.components.bottomNavigation)) {
+  for (const [key, token] of Object.entries(
+    theme.components.bottomNavigation,
+  )) {
     vars[`--ds-bottom-navigation-${toKebab(key)}`] = token;
   }
   for (const [key, token] of Object.entries(theme.components.toast)) {

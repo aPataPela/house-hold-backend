@@ -6,7 +6,7 @@ import type {
   ColorScale,
   DataVisualizationTokens,
 } from "./theme-contract";
-import { createThemeAssets } from "./theme-assets";
+import { themeAssetsRegistry } from "./theme-assets";
 
 type PaletteInput = {
   primary: ColorScale;
@@ -536,9 +536,13 @@ function buildTheme(theme: {
     info: string;
   };
   glassTint: string;
+  glassOpacity: string;
   glassBorder: string;
   glassShadow: string;
   glassOverlay: string;
+  glassBlur: string;
+  glassSaturation: string;
+  backgroundTreatment: ThemeDefinition["backgroundTreatment"];
   shadowTint: string;
   dataVisualization: DataVisualizationTokens;
   assets: ThemeDefinition["assets"];
@@ -572,12 +576,13 @@ function buildTheme(theme: {
 
   const glass = {
     tint: theme.glassTint,
+    opacity: theme.glassOpacity,
     background: theme.semantic.glassSurface,
     border: theme.glassBorder,
     shadow: theme.glassShadow,
     overlay: theme.glassOverlay,
-    blur: primitiveTokens.blur.lg,
-    saturation: "130%",
+    blur: theme.glassBlur,
+    saturation: theme.glassSaturation,
     fallbackBackground: theme.semantic.surface,
     fallbackBorder: theme.semantic.borderSubtle,
   };
@@ -595,6 +600,7 @@ function buildTheme(theme: {
     primitiveTokens,
     semanticColors,
     glass,
+    backgroundTreatment: theme.backgroundTreatment,
     dataVisualization: theme.dataVisualization,
     elevation: {
       0: "none",
@@ -608,11 +614,31 @@ function buildTheme(theme: {
       body: primitiveTokens.typography.family.body,
       mono: primitiveTokens.typography.family.mono,
       scale: {
-        caption: { size: primitiveTokens.typography.size[1], lineHeight: primitiveTokens.typography.lineHeight.normal, weight: 500 },
-        body: { size: primitiveTokens.typography.size[3], lineHeight: primitiveTokens.typography.lineHeight.normal, weight: 400 },
-        bodyStrong: { size: primitiveTokens.typography.size[3], lineHeight: primitiveTokens.typography.lineHeight.normal, weight: 600 },
-        title: { size: primitiveTokens.typography.size[5], lineHeight: primitiveTokens.typography.lineHeight.snug, weight: 700 },
-        headline: { size: primitiveTokens.typography.size[7], lineHeight: primitiveTokens.typography.lineHeight.tight, weight: 750 },
+        caption: {
+          size: primitiveTokens.typography.size[1],
+          lineHeight: primitiveTokens.typography.lineHeight.normal,
+          weight: 500,
+        },
+        body: {
+          size: primitiveTokens.typography.size[3],
+          lineHeight: primitiveTokens.typography.lineHeight.normal,
+          weight: 400,
+        },
+        bodyStrong: {
+          size: primitiveTokens.typography.size[3],
+          lineHeight: primitiveTokens.typography.lineHeight.normal,
+          weight: 600,
+        },
+        title: {
+          size: primitiveTokens.typography.size[5],
+          lineHeight: primitiveTokens.typography.lineHeight.snug,
+          weight: 700,
+        },
+        headline: {
+          size: primitiveTokens.typography.size[7],
+          lineHeight: primitiveTokens.typography.lineHeight.tight,
+          weight: 750,
+        },
       },
     },
     motion: {
@@ -661,12 +687,25 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
       info: "#2f6f98",
     },
     glassTint: "rgb(247 250 246 / 82%)",
+    glassOpacity: "0.82",
     glassBorder: "rgb(255 255 255 / 56%)",
     glassShadow: "0 18px 40px rgb(20 39 28 / 18%)",
-    glassOverlay: "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
+    glassOverlay:
+      "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
+    glassBlur: "18px",
+    glassSaturation: "120%",
+    backgroundTreatment: {
+      overlay:
+        "linear-gradient(180deg, rgb(232 239 230 / 30%), rgb(247 250 246 / 84%))",
+      heroOverlay:
+        "linear-gradient(90deg, rgb(247 250 246 / 94%) 0%, rgb(247 250 246 / 76%) 52%, rgb(247 250 246 / 18%) 100%)",
+      imageOpacity: "0.34",
+      imageOpacityMedium: "0.5",
+      imageOpacityStrong: "0.68",
+    },
     shadowTint: "#1e241f",
     dataVisualization: patagoniaData,
-    assets: createThemeAssets("patagonia"),
+    assets: themeAssetsRegistry.patagonia,
   }),
   chiloe: buildTheme({
     id: "chiloe",
@@ -700,12 +739,25 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
       info: "#2c6ee8",
     },
     glassTint: "rgb(255 253 248 / 84%)",
+    glassOpacity: "0.84",
     glassBorder: "rgb(255 255 255 / 54%)",
     glassShadow: "0 18px 40px rgb(16 44 49 / 18%)",
-    glassOverlay: "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
+    glassOverlay:
+      "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
+    glassBlur: "18px",
+    glassSaturation: "125%",
+    backgroundTreatment: {
+      overlay:
+        "linear-gradient(180deg, rgb(234 247 246 / 26%), rgb(255 253 248 / 86%))",
+      heroOverlay:
+        "linear-gradient(90deg, rgb(255 253 248 / 94%) 0%, rgb(255 253 248 / 74%) 52%, rgb(234 247 246 / 16%) 100%)",
+      imageOpacity: "0.36",
+      imageOpacityMedium: "0.52",
+      imageOpacityStrong: "0.7",
+    },
     shadowTint: "#3a2f28",
     dataVisualization: chiloeData,
-    assets: createThemeAssets("chiloe"),
+    assets: themeAssetsRegistry.chiloe,
   }),
   cordillera: buildTheme({
     id: "cordillera",
@@ -727,8 +779,8 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
       textPrimary: "#192029",
       textSecondary: "#55606b",
       textMuted: "#61707a",
-      actionPrimary: "#30445d",
-      actionPrimaryHover: "#253549",
+      actionPrimary: "#6d2230",
+      actionPrimaryHover: "#571b26",
       actionSecondary: "#a84a2b",
       borderSubtle: "#c7ced6",
       divider: "#dde3e9",
@@ -739,12 +791,25 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
       info: "#4c7fb5",
     },
     glassTint: "rgb(247 248 250 / 84%)",
+    glassOpacity: "0.86",
     glassBorder: "rgb(255 255 255 / 56%)",
     glassShadow: "0 18px 40px rgb(24 30 36 / 18%)",
-    glassOverlay: "linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 6%))",
+    glassOverlay:
+      "linear-gradient(180deg, rgb(255 255 255 / 22%), rgb(255 255 255 / 6%))",
+    glassBlur: "16px",
+    glassSaturation: "110%",
+    backgroundTreatment: {
+      overlay:
+        "linear-gradient(180deg, rgb(233 237 242 / 34%), rgb(247 248 250 / 88%))",
+      heroOverlay:
+        "linear-gradient(90deg, rgb(247 248 250 / 96%) 0%, rgb(247 248 250 / 78%) 52%, rgb(233 237 242 / 20%) 100%)",
+      imageOpacity: "0.32",
+      imageOpacityMedium: "0.48",
+      imageOpacityStrong: "0.66",
+    },
     shadowTint: "#26274a",
     dataVisualization: cordilleraData,
-    assets: createThemeAssets("cordillera"),
+    assets: themeAssetsRegistry.cordillera,
   }),
   "san-pedro": buildTheme({
     id: "san-pedro",
@@ -778,11 +843,24 @@ export const themeDefinitions: Record<ThemeId, ThemeDefinition> = {
       info: "#2c88b8",
     },
     glassTint: "rgb(255 250 241 / 86%)",
+    glassOpacity: "0.86",
     glassBorder: "rgb(255 255 255 / 58%)",
     glassShadow: "0 18px 40px rgb(63 41 26 / 18%)",
-    glassOverlay: "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
+    glassOverlay:
+      "linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 8%))",
+    glassBlur: "18px",
+    glassSaturation: "115%",
+    backgroundTreatment: {
+      overlay:
+        "linear-gradient(180deg, rgb(251 241 223 / 24%), rgb(255 250 241 / 84%))",
+      heroOverlay:
+        "linear-gradient(90deg, rgb(255 250 241 / 94%) 0%, rgb(255 250 241 / 72%) 52%, rgb(251 241 223 / 14%) 100%)",
+      imageOpacity: "0.38",
+      imageOpacityMedium: "0.54",
+      imageOpacityStrong: "0.72",
+    },
     shadowTint: "#5c3c21",
     dataVisualization: sanPedroData,
-    assets: createThemeAssets("san-pedro"),
+    assets: themeAssetsRegistry["san-pedro"],
   }),
 };
