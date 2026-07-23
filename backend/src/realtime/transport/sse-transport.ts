@@ -1,4 +1,3 @@
-import type { Response } from "express";
 import type {
   RealtimeConnection,
   RealtimeConnectionContext,
